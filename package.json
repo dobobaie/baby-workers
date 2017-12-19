@@ -1,0 +1,44 @@
+{
+  "name": "baby-workers",
+  "version": "0.0.8",
+  "description": "Manage your functions asynchronously or as stack with baby-workers.",
+  "main": "workers.min.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dobobaie/baby-workers.git"
+  },
+  "keywords": [
+    "javascript",
+    "nodejs",
+    "workers",
+    "worker",
+    "error",
+    "manager",
+    "asynchronous",
+    "function",
+    "stack",
+    "array",
+    "callback",
+    "complete",
+    "worker",
+    "save",
+    "get",
+    "timeout",
+    "interval",
+    "callback",
+    "js",
+    "manage",
+    "synchronous",
+    "asynch",
+    "synch"
+  ],
+  "author": "dobobaie",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dobobaie/baby-workers/issues"
+  },
+  "homepage": "https://github.com/dobobaie/baby-workers#readme"
+}
