@@ -95,7 +95,11 @@ var Workers = function()
 		this.timeout = function(time)
 		{
 			time = (time == null || typeof(time) != 'number' ? 1 : time);
-			setTimeout(_engine.this.run, time);
+			_engine.this.addWorker();
+			setTimeout(function() {
+				_engine.this.run();
+				_engine.this.removeWorker(false);
+			}, time);
 			delete _engine.this.timeout;
 			return _engine.this;
 		}
@@ -218,9 +222,21 @@ var Workers = function()
 			return _engine.this;
 		}
 
+		this._save = function(data)
+		{
+			var parent = _engine.parent;
+			return (parent == null ? parent : parent.save(data));
+		}
+
 		this.get = function()
 		{
 			return _engine.save;
+		}
+
+		this._get = function()
+		{
+			var parent = _engine.parent;
+			return (parent == null ? parent : parent.get());
 		}
 
 		this.root = function()

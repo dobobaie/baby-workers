@@ -75,9 +75,11 @@ workers.create('interval', (worker) => {
 
 // Manipule worker data
 workers.create('data', (worker) => {
-	var tab = worker.root().get();
+	// var tab = worker.root().get();
+	var tab = worker._get(); // new version to get data from root
 	tab.push('coucou');
-	worker.root().save(tab);
+	// worker.root().save(tab);
+	worker._save(tab); // new version to save data from root
 	worker.save('coucou is my name');
 	
     worker.create('data2', (worker) => {
@@ -88,7 +90,8 @@ workers.create('data', (worker) => {
 	}).run();
 
     worker.complete(() => {
-    	console.log('Tab ?', worker.root().get());
+    	// console.log('Tab ?', worker.root().get());
+    	console.log('Tab ?', worker._get()); // new version to get data from root
     });
   	worker.pop();
 }).save([]).run();
@@ -133,7 +136,9 @@ removeWorker(isParent: `boolean`) : `currentWorker` | ALL | Remove virtual worke
 complete(callback: `function`, removeAfterCall: `boolean`) : `currentWorker` | ALL | Call function when current process is finish (node, parent => when childrens are finish or root => when childrens are finish) 
 error(error: `string`, fatalError: `string`) : `currentWorker` | ALL | Set error in current worker and all parent in the tree
 save(data: `any`) : `currentWorker` | ALL | Save any data in current worker (node, parent or root) 
+_save(data: `any`) : `currentWorker` | ALL | Save any data in current worker (node, parent or root) from root
 get() : `any` | ALL | Get data previously saved 
+_get() : `any` | ALL | Get data previously saved from root 
 root() : `parentWorker` | NODE | Get root/parent of current worker 
 parent(name: `string`, type: `string = 'parent'`) : `parentWorker OR nodeWorker` | PARENT & NODE | Get any parent/node going up the tree 
 parentNode(name: `string`) : `parentWorker OR nodeWorker` | PARENT & NODE | Get any node going up the tree 
