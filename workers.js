@@ -82,7 +82,7 @@ var Workers = function()
 			_parent.data = data;
 			_parent.callback = callback;
 			_engine.status = $enum.STATUS.WAITING;
-			_engine.totalWorkers = 1;
+			_engine.this.addWorker();
 			delete _engine.this.set;
 			return _engine.this;
 		}
@@ -98,11 +98,7 @@ var Workers = function()
 		this.timeout = function(time)
 		{
 			time = (time == null || typeof(time) != 'number' ? 1 : time);
-			_engine.this.addWorker();
-			setTimeout(function() {
-				_engine.this.run();
-				_engine.this.removeWorker(false);
-			}, time);
+			setTimeout(_engine.this.run, time);
 			delete _engine.this.timeout;
 			return _engine.this;
 		}
@@ -131,9 +127,11 @@ var Workers = function()
 				_parent.stack.isRunning = $enum.STATUS.RUNNING;
 				_parent.callback(_parent.nodes[index], _parent.data[index]);
 			}
+			
 			if (_parent.stack.currentNode == 0) {
-				_engine.totalWorkers -= 1;
+				_engine.this.removeWorker(false);
 			}
+			
 			return _engine.this;
 		}
 
@@ -281,10 +279,10 @@ var Workers = function()
 		{
 			var newList = [];
 			for (var index in _engine.completeCallback) {
-				if (typeof(_engine.completeCallback[index].removeAfterCall) == 'boolean' && _engine.completeCallback[index] == false) {
+				if (typeof(_engine.completeCallback[index].removeAfterCall) == 'boolean' && _engine.completeCallback[index].removeAfterCall == false) {
 					newList.push(_engine.completeCallback[index]);
 				}
-				_engine.completeCallback[index].callback(_engine.error);
+				_engine.completeCallback[index].callback(_engine.error, _engine.fatalError);
 			}
 			_engine.completeCallback = newList;
 		}
