@@ -34,13 +34,15 @@ var Workers = function()
 			return _engine.this[name];
 		}
 
-		this.init = function(parent, type)
+		this.init = function(parent, type, id)
 		{
 			_engine.parent = parent;
 			_engine.type = type;
+			_engine.id = id;
 			switch (type)
 			{
 				case $enum.TYPE.ROOT:
+					delete _engine.this.getId;
 					delete _engine.this.timeout;
 					delete _engine.this.interval;
 					delete _engine.this.run;
@@ -52,6 +54,7 @@ var Workers = function()
 					delete _engine.this.node;
 				break;
 				case $enum.TYPE.PARENT:
+					delete _engine.this.getId;
 					delete _engine.this.pop;
 					delete _engine.this.root;
 				break;
@@ -72,7 +75,7 @@ var Workers = function()
 			data = (data == null || typeof(data) != 'object' || data[0] == undefined ? [data] : Object.values(data));
 			for (var index in data) {
 				var nodeProcess = new $process(_engine.name);
-				nodeProcess.init(_engine.this, $enum.TYPE.NODE);
+				nodeProcess.init(_engine.this, $enum.TYPE.NODE, index);
 				_parent.nodes.push(nodeProcess);
 				_parent.worker += 1;
 			}
@@ -152,6 +155,11 @@ var Workers = function()
 		this.getType = function()
 		{
 			return _engine.type;
+		}
+
+		this.getId = function()
+		{
+			return _engine.id;
 		}
 
 		this.getStatus = function()
@@ -295,6 +303,7 @@ var Workers = function()
 
 		var _engine = {
 			this: this,
+			id: null,
 			name: processName,
 			parent: null,
 			status: $enum.NONE,

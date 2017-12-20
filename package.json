@@ -1,6 +1,6 @@
 {
   "name": "baby-workers",
-  "version": "0.0.9",
+  "version": "1.0.0",
   "description": "Manage your functions asynchronously or as stack with baby-workers.",
   "main": "workers.min.js",
   "scripts": {

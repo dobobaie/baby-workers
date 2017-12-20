@@ -17,9 +17,9 @@ const babyWorkers = require('baby-workers');
 const workers = new babyWorkers;
  
 // Basic worker
-workers.create('basic', (worker, id) => {
+workers.create('basic', (worker, elem) => {
     setTimeout(() => {
-        console.log('basic =>', id);
+        console.log('basic =>', elem, ' - ', 'my id =>', worker.getId());
         worker.pop();
     }, (~~(Math.random() * 1000)));
 }, ['a', 'b', 'c', 'd']).run();
@@ -28,9 +28,9 @@ workers.basic.complete(() => {
 });
 
 // Stack worker 
-workers.create('stack', (worker, id) => {
+workers.create('stack', (worker, elem) => {
     setTimeout(() => {
-        console.log('stack =>', id);
+        console.log('stack =>', elem, ' - ', 'my id =>', worker.getId());
         worker.pop();
     }, (~~(Math.random() * 1000)));
 }, ['z', 'y', 'x', 'w']).stack(); // mode stack enabled
@@ -39,9 +39,9 @@ workers.stack.complete(() => {
 });
 
 // Basic worker without array
-workers.create('simple', (worker, id) => {
+workers.create('simple', (worker, elem) => {
     setTimeout(() => {
-        console.log('simple =>', id);
+        console.log('simple =>', elem);
         worker.pop();
     }, (~~(Math.random() * 1000)));
 }, "toto").run();
@@ -127,6 +127,7 @@ run() : `currentWorker` | PARENT | Run current worker
 stack() : `currentWorker` | PARENT | Run nodes like stack 
 timeout(time: `number = 1`) : `currentWorker` | PARENT | Run nodes like run in setTimeout 
 interval(time: `number = 1000`) : `currentWorker` | PARENT | Run nodes like run in setInterval | stop() : `currentWorker`, NODE, Stop interval 
+getId() : `number` | NODE | Get id of current node worker 
 getStatus() : `string` | ALL | Get status of current worker 
 getName() : `string` | ALL | Get name of current worker 
 getType() : `string` | ALL | Return type of current worker 
