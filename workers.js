@@ -199,7 +199,7 @@ var Workers = function()
 
 		this.getLimit = function()
 		{
-			return _parent.maxWorkers + (_engine.parent != null ? _engine.parent.getLimit() : 0);
+			return (_parent.maxWorkers == -1 ? 0 : (_parent.maxWorkers + (_engine.parent != null ? _engine.parent.getLimit() : 0)));
 		}
 
 		this.getTotalWorkers = function()
