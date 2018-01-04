@@ -42,6 +42,7 @@ var Workers = function()
 			switch (type)
 			{
 				case $enum.TYPE.ROOT:
+					delete _engine.this.cancel;
 					delete _engine.this.getId;
 					delete _engine.this.timeout;
 					delete _engine.this.interval;
@@ -59,6 +60,7 @@ var Workers = function()
 					delete _engine.this.root;
 				break;
 				case $enum.TYPE.NODE:
+					delete _engine.this.cancel;
 					delete _engine.this.timeout;
 					delete _engine.this.interval;
 					delete _engine.this.run;
@@ -132,6 +134,16 @@ var Workers = function()
 				_engine.this.removeWorker(false);
 			}
 			
+			return _engine.this;
+		}
+
+		this.cancel = function()
+		{
+			_engine.totalWorkers -= 1;
+			if (_engine.totalWorkers === 0) {
+				$execCompleteCallback();
+			}
+			_engine.this.removeWorker(true);
 			return _engine.this;
 		}
 

@@ -96,6 +96,13 @@ workers.create('data', (worker) => {
   	worker.pop();
 }).save([]).run();
 
+// Cancel parent worker
+const runMe = workers.create('cancel', (worker) => {
+	// never call
+	worker.pop();
+});
+runMe.cancel();
+
 // Set errors
 workers.create('error', (worker) => {
 	worker.error('Why ?', 'Because you stole my bread dude...')
@@ -127,6 +134,7 @@ run() : `currentWorker` | PARENT | Run current worker
 stack() : `currentWorker` | PARENT | Run nodes like stack 
 timeout(time: `number = 1`) : `currentWorker` | PARENT | Run nodes like run in setTimeout 
 interval(time: `number = 1000`) : `currentWorker` | PARENT | Run nodes like run in setInterval | stop() : `currentWorker`, NODE, Stop interval 
+cancel() : `currentWorker` | PARENT | Cancel current instance and execute complete callback 
 getId() : `number` | NODE | Get id of current node worker 
 getStatus() : `string` | ALL | Get status of current worker 
 getName() : `string` | ALL | Get name of current worker 
