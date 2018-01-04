@@ -125,35 +125,51 @@ var Workers = function()
 				if (_parent.stack.status === true && (_parent.stack.isRunning === $enum.STATUS.RUNNING || _parent.stack.currentNode !== parseInt(index))) {
 					continue;
 				}
-				_parent.nodes[index].addWorker();
+
+				if (_parent.wasRejected == true && _parent.stack.currentNode !== parseInt(index)) {
+					continue;
+				}
+				if (_parent.wasRejected == true) {
+					_parent.wasRejected = false;
+				}
+				if (_engine.this.getLimit() != 0 && _engine.this.getLimit() <= _engine.this.getTotalRunningWorkers()) {
+					_parent.stack.currentNode = parseInt(index);
+					_parent.wasRejected = true;
+					_engine.this.waiting(function(next) {
+						_engine.this.run();
+						next();
+					});
+					break;
+				}
+
+				_parent.nodes[index].addWorker(true);
 				_parent.stack.isRunning = $enum.STATUS.RUNNING;
 				_parent.callback(_parent.nodes[index], _parent.data[index]);
 			}
 			
-			if (_parent.stack.currentNode == 0) {
+			if (_parent.stack.currentNode == 0 && _parent.wasRejected == false) {
 				_engine.this.removeWorker(false);
 			}
-			
 			return _engine.this;
 		}
 
 		this.cancel = function()
 		{
 			_engine.totalWorkers -= 1;
-			if (_engine.totalWorkers === 0) {
+			if (_engine.totalWorkers === 0 && _engine.totalWaitingWorkers === 0) {
 				$execCompleteCallback();
 			}
-			_engine.this.removeWorker(true);
+			_engine.this.removeWorker(true, true);
 			return _engine.this;
 		}
 
 		this.pop = function()
 		{
 			_engine.totalWorkers -= 1;
-			if (_engine.totalWorkers === 0) {
+			if (_engine.totalWorkers === 0 && _engine.totalWaitingWorkers === 0) {
 				$execCompleteCallback();
 			}
-			_engine.parent.removeWorker(true);
+			_engine.parent.removeWorker(true, true);
 			return _engine.this;
 		}
 
@@ -177,37 +193,48 @@ var Workers = function()
 			return _engine.status;
 		}
 
-		this.addWorker = function()
+
+
+
+
+		this.getLimit = function()
 		{
-			_engine.totalWorkers += 1;
-			if (_engine.parent !== null) {
-				_engine.parent.addWorker();
-			}
+			return _parent.maxWorkers + (_engine.parent != null ? _engine.parent.getLimit() : 0);
+		}
+
+		this.getTotalWorkers = function()
+		{
+			return (_engine.parent != null ? _engine.parent.getTotalWorkers() : _engine.totalWorkers);
+		}
+
+		this.getTotalRunningWorkers = function()
+		{
+			return (_engine.parent != null ? _engine.parent.getTotalRunningWorkers() : _engine.totalRunningWorkers);
+		}
+
+		this.limit = function(max)
+		{
+			_parent.maxWorkers = max;
 			return _engine.this;
 		}
 
-		this.removeWorker = function(isParent)
+		this.waiting = function(callback)
 		{
-			if (typeof(isParent) === 'boolean' && isParent === true) {
-				_parent.worker -= 1;
-				_engine.status = $enum.STATUS.FINISH;
-				if (_parent.stack.status === true) {
-					_parent.stack.currentNode += 1;
-					_parent.stack.isRunning = $enum.STATUS.WAITING;
-					_engine.this.run();
-				}
+			if (_engine.parent != null) {
+				return _engine.parent.waiting(callback);
 			}
-
-			_engine.totalWorkers -= 1;
 			if (_engine.totalWorkers === 0) {
-				$execCompleteCallback();
+				callback();
 			}
-			
-			if (_engine.parent !== null) {
-				_engine.parent.removeWorker(false);
-			}
+			_engine.waitingCallback.push({
+				callback: callback,
+			});
 			return _engine.this;
 		}
+
+
+
+
 
 		this.complete = function(callback, removeAfterCall)
 		{
@@ -221,6 +248,51 @@ var Workers = function()
 				callback: callback,
 				removeAfterCall: removeAfterCall,
 			});
+			return _engine.this;
+		}
+
+		this.addWorker = function(isRunning)
+		{
+			if (typeof(isRunning) === 'boolean' && isRunning === true) {
+				_engine.totalRunningWorkers += 1;
+			}
+
+			_engine.totalWorkers += 1;
+			if (_engine.parent !== null) {
+				_engine.parent.addWorker(isRunning);
+			}
+			return _engine.this;
+		}
+
+		this.removeWorker = function(isParent, isRunning)
+		{
+			if (typeof(isParent) === 'boolean' && isParent === true) {
+				_parent.worker -= 1;
+				_engine.status = $enum.STATUS.FINISH;
+				if (_parent.stack.status === true) {
+					_parent.stack.currentNode += 1;
+					_parent.stack.isRunning = $enum.STATUS.WAITING;
+					_engine.this.run();
+				}
+			}
+
+			if (typeof(isRunning) === 'boolean' && isRunning === true) {
+				_engine.totalRunningWorkers -= 1;
+			}
+	
+			_engine.totalWorkers -= 1;
+
+			if (_engine.parent === null) {
+				$execWaitingCallback();
+			}
+
+			if (_engine.totalWorkers === 0 && _engine.totalWaitingWorkers === 0) {
+				$execCompleteCallback();
+			}
+			
+			if (_engine.parent !== null) {
+				_engine.parent.removeWorker(false, isRunning);
+			}
 			return _engine.this;
 		}
 
@@ -287,19 +359,37 @@ var Workers = function()
 			return (_engine.nodes[key] == undefined ? null : _engine.nodes[key]);
 		}
 
+		var $execWaitingCallback = function()
+		{
+			var copyCallback = _engine.waitingCallback;
+			_engine.waitingCallback = [];
+			for (var index in copyCallback) {
+				_engine.totalWaitingWorkers += 1;
+				copyCallback[index].callback(function() {
+					_engine.totalWaitingWorkers -= 1;
+					if (_engine.totalWorkers === 0 && _engine.totalWaitingWorkers === 0) {
+						$execCompleteCallback();
+					}
+					return _engine.this;
+				});
+			}
+		}
+
 		var $execCompleteCallback = function()
 		{
-			var newList = [];
-			for (var index in _engine.completeCallback) {
-				if (typeof(_engine.completeCallback[index].removeAfterCall) == 'boolean' && _engine.completeCallback[index].removeAfterCall == false) {
-					newList.push(_engine.completeCallback[index]);
+			var copyCallback = _engine.completeCallback;
+			_engine.completeCallback = [];
+			for (var index in copyCallback) {
+				if (typeof(copyCallback[index].removeAfterCall) == 'boolean' && copyCallback[index].removeAfterCall == false) {
+					_engine.completeCallback.push(copyCallback[index]);
 				}
-				_engine.completeCallback[index].callback(_engine.error, _engine.fatalError);
+				copyCallback[index].callback(_engine.error, _engine.fatalError);
 			}
-			_engine.completeCallback = newList;
 		}
 
 		var _parent = {
+			maxWorkers: 0,
+			wasRejected: false,
 			nodes: [],
 			worker: 0,
 			data: [],
@@ -320,10 +410,13 @@ var Workers = function()
 			type: $enum.NONE,
 			save: null,
 			error: null,
-			fatalError: null,	
+			fatalError: null,
 			children: {},
 			completeCallback: [],
+			waitingCallback: [],
 			totalWorkers: 0,
+			totalRunningWorkers: 0,
+			totalWaitingWorkers: 0,
 		};
 	}
 

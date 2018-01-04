@@ -1,15 +1,38 @@
 {
-  "name": "baby-workers",
-  "version": "1.0.2",
+  "_from": "baby-workers",
+  "_id": "baby-workers@1.0.2",
+  "_inBundle": false,
+  "_integrity": "sha512-ODoeKpd4PE4Egek3XYvBSwuKm5qjqqd4UAT2qi7Xb6dfCEOwn7jpLZMLAq6oPpF36zcIj5WgTt/qHeeVqEuT8g==",
+  "_location": "/baby-workers",
+  "_phantomChildren": {},
+  "_requested": {
+    "type": "tag",
+    "registry": true,
+    "raw": "baby-workers",
+    "name": "baby-workers",
+    "escapedName": "baby-workers",
+    "rawSpec": "",
+    "saveSpec": null,
+    "fetchSpec": "latest"
+  },
+  "_requiredBy": [
+    "#USER",
+    "/"
+  ],
+  "_resolved": "https://registry.npmjs.org/baby-workers/-/baby-workers-1.0.2.tgz",
+  "_shasum": "81e9947d465631216b59de0818a1eca250d1820a",
+  "_spec": "baby-workers",
+  "_where": "C:\\Users\\EMHALLI\\Projects\\Abc\\Services\\Pdf-generator",
+  "author": {
+    "name": "dobobaie"
+  },
+  "bugs": {
+    "url": "https://github.com/dobobaie/baby-workers/issues"
+  },
+  "bundleDependencies": false,
+  "deprecated": false,
   "description": "Manage your functions asynchronously or as stack with baby-workers.",
-  "main": "workers.min.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/dobobaie/baby-workers.git"
-  },
+  "homepage": "https://github.com/dobobaie/baby-workers#readme",
   "keywords": [
     "javascript",
     "nodejs",
@@ -35,10 +58,15 @@
     "asynch",
     "synch"
   ],
-  "author": "dobobaie",
   "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/dobobaie/baby-workers/issues"
+  "main": "workers.js",
+  "name": "baby-workers",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dobobaie/baby-workers.git"
   },
-  "homepage": "https://github.com/dobobaie/baby-workers#readme"
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "version": "1.0.2"
 }

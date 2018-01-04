@@ -140,8 +140,8 @@ getStatus() : `string` | ALL | Get status of current worker
 getName() : `string` | ALL | Get name of current worker 
 getType() : `string` | ALL | Return type of current worker 
 pop() : `currentWorker` | NODE | Stop current node
-addWorker() : `currentWorker` | ALL | Add virtual worker in current worker (it used for external asynch function) 
-removeWorker(isParent: `boolean`) : `currentWorker` | ALL | Remove virtual worker in current worker (it used for external asynch function) 
+addWorker(isRunning: `boolean`) : `currentWorker` | ALL | Add virtual worker in current worker (it used for external asynch function) 
+removeWorker(isParent: `boolean`, isRunning: `boolean`) : `currentWorker` | ALL | Remove virtual worker in current worker (it used for external asynch function) 
 complete(callback: `function`, removeAfterCall: `boolean`) : `currentWorker` | ALL | Call function when current process is finish (node, parent => when childrens are finish or root => when childrens are finish) 
 error(error: `string`, fatalError: `string`) : `currentWorker` | ALL | Set error in current worker and all parent in the tree
 save(data: `any`) : `currentWorker` | ALL | Save any data in current worker (node, parent or root) 
