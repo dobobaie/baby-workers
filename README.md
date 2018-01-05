@@ -13,7 +13,7 @@ Create as much workers that you need, for a simple function or for each element 
 Plus, It's like Thread in another language you can control all workers and limit the number of execute of asynchronous functions.
 
 ``` js
-const workers = new babyWorkers;
+const babyWorkers = require('baby-workers');
  
 const workers = new babyWorkers;
  
