@@ -1,10 +1,10 @@
 {
   "name": "baby-workers",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Manage your functions asynchronously or as stack with baby-workers.",
   "main": "workers.min.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node examples/all.js"
   },
   "repository": {
     "type": "git",

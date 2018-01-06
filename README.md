@@ -21,6 +21,97 @@ const workers = new babyWorkers;
 console.time('time');
 
 // Basic worker
+workers.create('basic', (worker, elem) => { // Create worker with : name, callback, data
+    setTimeout(() => {
+        console.log('basic =>', elem, ' - ', 'my id =>', worker.getId());
+        worker.pop(); // Finish current node
+    }, (~~(Math.random() * 1000)));
+}, ['a', 'b', 'c', 'd']).run(); // Data are an array so each elements will be browse and executed from callback
+
+workers.basic.complete(() => {
+    console.log('All "basic" workers has finished');
+});
+
+// All workers has finish
+workers.complete((error, fatalError) => {
+     console.log('All "workers" has finished', 'maybe some errors ?', error, fatalError);
+
+     // Console Time
+     console.timeEnd('time');
+});
+```
+
+More examples at the end of README.md file.
+
+## Demos
+* [Basic](https://raw.githubusercontent.com/dobobaie/baby-workers/master/examples/basic.js)
+* [Stack](https://raw.githubusercontent.com/dobobaie/baby-workers/master/examples/stack.js)
+* [Simulate adding/removing worker](https://raw.githubusercontent.com/dobobaie/baby-workers/master/examples/add_remove_worker.js)
+* [Set timeout](https://raw.githubusercontent.com/dobobaie/baby-workers/master/examples/timeout.js)
+* [Set interval](https://raw.githubusercontent.com/dobobaie/baby-workers/master/examples/interval.js)
+* [Adding data](https://raw.githubusercontent.com/dobobaie/baby-workers/master/examples/data.js)
+* [Cancel worker](https://raw.githubusercontent.com/dobobaie/baby-workers/master/examples/cancel.js)
+* [Limit workers with a queue](https://raw.githubusercontent.com/dobobaie/baby-workers/master/examples/limit.js)
+* [Set error](https://raw.githubusercontent.com/dobobaie/baby-workers/master/examples/error.js)
+* [All](https://raw.githubusercontent.com/dobobaie/baby-workers/master/examples/all.js)
+
+## How is it works ?
+
+Three entites :
+* Root (default instance never use by you)
+* Parent (parent instance created by worker.create)
+* Node (node instance created by parent for each element of array).
+
+The principe is to run asynchronouse (or not) function easily and manage them when the worker has finished with a callback.
+Launch any request on any element.
+
+## Functions
+
+Name | Available | Description | Additionnal
+---- | --------- | ----------- | -----------
+create(name: `string`, callback: `function`, data: `any = undefined`) : `currentWorker` | ALL | Create a new worker
+run() : `currentWorker` | PARENT | Run current worker
+stack() : `currentWorker` | PARENT | Run nodes like stack 
+timeout(time: `number = 1`) : `currentWorker` | PARENT | Run nodes like run in setTimeout 
+interval(time: `number = 1000`) : `currentWorker` | PARENT | Run nodes like run in setInterval | stop() : `currentWorker`, NODE, Stop interval 
+cancel() : `currentWorker` | PARENT | Cancel current instance and execute complete callback 
+limit(maxWorkers: `number = 0`) | ROOT & PARENT | Limit the number of workers as running (Default 0 = unlimited or take limit of parent | -1 = unlimited and ignore parent)
+pop() : `currentWorker` | NODE | Stop current node
+addWorker() : `currentWorker` | ALL | Add virtual worker in current worker (it used for external asynch function) 
+removeWorker(isParent: `boolean`) : `currentWorker` | ALL | Remove virtual worker in current worker (it used for external asynch function) 
+complete(callback: `function`, removeAfterCall: `boolean`) : `currentWorker` | ALL | Call function when current process is finish (node, parent => when childrens are finish or root => when childrens are finish) 
+error(error: `string`, fatalError: `string`) : `currentWorker` | ALL | Set error in current worker and all parent in the tree
+save(data: `any`) : `currentWorker` | ALL | Save any data in current worker (node, parent or root) 
+_save(data: `any`) : `currentWorker` | ALL | Save any data in current worker (node, parent or root) from root
+get() : `any` | ALL | Get data previously saved 
+_get() : `any` | ALL | Get data previously saved from root 
+root() : `parentWorker` | NODE | Get root/parent of current worker 
+parent(name: `string`, type: `string = 'parent'`) : `parentWorker OR nodeWorker` | PARENT & NODE | Get any parent/node going up the tree 
+parentNode(name: `string`) : `parentWorker OR nodeWorker` | PARENT & NODE | Get any node going up the tree 
+node(key: `number`) : `nodeWorker` | PARENT | Get direct node going down the tree 
+getId() : `number` | NODE | Get id of current node worker 
+getStatus() : `string` | ALL | Get status of current worker 
+getName() : `string` | ALL | Get name of current worker 
+getType() : `string` | ALL | Return type of current worker
+getLimit() : `number` | ALL | Return the limit of workers allowed in current workers
+getWorkers() : `number` | ALL | Return the number of workers
+getWaitingWorkers() : `number` | ALL | Return the number of waiting workers
+getRunningWorkers() : `number` | ALL | Return the number of running workers
+getTotalWorkers() : `number` | ALL | Return the total number of workers (nodes included)
+getTotalWaitingWorkers() : `number` | ALL | Return the total number of workers (nodes included)
+getTotalRunningWorkers() : `number` | ALL | Return the total number of workers (nodes included)
+
+## All example
+
+``` js
+const babyWorkers = require('baby-workers');
+
+const workers = new babyWorkers;
+
+// Console Time
+console.time('time');
+
+// Basic worker
 workers.create('basic', (worker, elem) => {
     setTimeout(() => {
         console.log('basic =>', elem, ' - ', 'my id =>', worker.getId());
@@ -155,162 +246,4 @@ workers.complete((error, fatalError) => {
      // Console Time
      console.timeEnd('time');
 });
-```
-
-## How is it works ?
-
-Three entites :
-* Root (default instance never use by you)
-* Parent (parent instance created by worker.create)
-* Node (node instance created by parent for each element of array).
-
-The principe is to run asynchronouse (or not) function easily and manage them when the worker has finished with a callback.
-Launch any request on any element.
-
-## Functions
-
-Name | Available | Description | Additionnal
----- | --------- | ----------- | -----------
-create(name: `string`, callback: `function`, data: `any = undefined`) : `currentWorker` | ALL | Create a new worker
-run() : `currentWorker` | PARENT | Run current worker
-stack() : `currentWorker` | PARENT | Run nodes like stack 
-timeout(time: `number = 1`) : `currentWorker` | PARENT | Run nodes like run in setTimeout 
-interval(time: `number = 1000`) : `currentWorker` | PARENT | Run nodes like run in setInterval | stop() : `currentWorker`, NODE, Stop interval 
-cancel() : `currentWorker` | PARENT | Cancel current instance and execute complete callback 
-limit(maxWorkers: `number = 0`) | ROOT & PARENT | Limit the number of workers as running (Default 0 = unlimited or take limit of parent | -1 = unlimited and ignore parent)
-pop() : `currentWorker` | NODE | Stop current node
-addWorker() : `currentWorker` | ALL | Add virtual worker in current worker (it used for external asynch function) 
-removeWorker(isParent: `boolean`) : `currentWorker` | ALL | Remove virtual worker in current worker (it used for external asynch function) 
-complete(callback: `function`, removeAfterCall: `boolean`) : `currentWorker` | ALL | Call function when current process is finish (node, parent => when childrens are finish or root => when childrens are finish) 
-error(error: `string`, fatalError: `string`) : `currentWorker` | ALL | Set error in current worker and all parent in the tree
-save(data: `any`) : `currentWorker` | ALL | Save any data in current worker (node, parent or root) 
-_save(data: `any`) : `currentWorker` | ALL | Save any data in current worker (node, parent or root) from root
-get() : `any` | ALL | Get data previously saved 
-_get() : `any` | ALL | Get data previously saved from root 
-root() : `parentWorker` | NODE | Get root/parent of current worker 
-parent(name: `string`, type: `string = 'parent'`) : `parentWorker OR nodeWorker` | PARENT & NODE | Get any parent/node going up the tree 
-parentNode(name: `string`) : `parentWorker OR nodeWorker` | PARENT & NODE | Get any node going up the tree 
-node(key: `number`) : `nodeWorker` | PARENT | Get direct node going down the tree 
-getId() : `number` | NODE | Get id of current node worker 
-getStatus() : `string` | ALL | Get status of current worker 
-getName() : `string` | ALL | Get name of current worker 
-getType() : `string` | ALL | Return type of current worker
-getLimit() : `number` | ALL | Return the limit of workers allowed in current workers
-getWorkers() : `number` | ALL | Return the number of workers
-getWaitingWorkers() : `number` | ALL | Return the number of waiting workers
-getRunningWorkers() : `number` | ALL | Return the number of running workers
-getTotalWorkers() : `number` | ALL | Return the total number of workers (nodes included)
-getTotalWaitingWorkers() : `number` | ALL | Return the total number of workers (nodes included)
-getTotalRunningWorkers() : `number` | ALL | Return the total number of workers (nodes included)
-
-## Exemples 2
-
-``` js
-const request = require('request');
-const babyWorkers = require('baby-workers');
-
-class Main
-{
-	constructor()
-	{
-		this.workers = new babyWorkers;
-		
-		this.workers.create('users', this.getUser, ['58bdza054dre58a9dra56', 'ddz548ftbc5045dee87rr']).save([]).run();
-		this.workers.users.complete((error) => {
-			if (error !== null) {
-				return ;
-			}
-			console.log('Users:', this.workers.users.get());
-		});
-		
-		this.workers.create('articles', this.getArticles, ['45dz54dez50dez84fzsd', 'bvc0b4b8fdfdg48dfgfd1', 'd48d4z0g4v8cx4q8sc4q']).save([]).run();
-		this.workers.articles.complete((error) => {
-			if (error !== null) {
-				return ;
-			}
-			console.log('Articles:', this.workers.articles.get());
-		});
-		
-		this.workers.complete((error, fatalError) => {
-			if (error !== null) {
-				console.log(error);
-				console.error(fatalError);
-				return ;
-			}
-			console.log('All workers has finished');
-		});
-	}
-
-	getUser(worker, idUser)
-	{
-		request({
-			url: urlGetUser + idUser,
-		}, (error, response, body) => {
-			if (error !== null) {
-				worker.error('Get user ' + idUser + ' error', error);
-				return worker.pop();
-			}
-			worker.save(body); // to get idUser from getBillUser
-			worker.create('notifyUser', this.putNotifyUser, idUser).run();
-			worker.create('billUser', this.getBillUser, body.data.bills).save([]).run();
-			worker.billUser.complete(() => {
-				worker.root().save(worker.root().get().concat([{
-firstName: body.data.firstName,
-lastName: body.data.lastName,
-bills: worker.billUser.get(),
-				}]));
-				worker.pop();
-			});
-		});
-	}
-
-	putNotifyUser(worker, idUser)
-	{
-		request({
-			url: urlNotifyUser + idUser,
-		}, (error, response, body) => {
-			if (error !== null) {
-				worker.error('Notify user ' + idUser + ' error', error);
-			}
-			worker.pop();
-		});
-	}
-
-	getBillUser(worker, idBill)
-	{
-		request({
-			url: urlGetBillUser + idBill,
-		}, (error, response, body) => {
-			if (error !== null) {
-				const idUser = worker.root().get().idUser; // previously saved from getUser
-				worker.error('Billd user ' + idUser + ' error', error);
-			} else {
-				worker.root().save(worker.root().get().concat([{
-name: body.data.name,
-					amount: body.data.amount,
-				}]));
-			}
-			worker.pop();
-		});
-	}
-
-	getArticles(worker, idArticle)
-	{
-		request({
-			url: urlGetArticle + idArticle,
-		}, (error, response, body) => {
-			if (error !== null) {
-				worker.error('Article ' + idArticle + ' error', error);
-			} else {
-				worker.root().save(worker.root().get().concat([{
-					title: body.data.title,
-					content: body.data.content,
-				}]));
-			}
-			worker.pop();
-		});
-	}
-}
-
-module.exports = new Main;
 ```
