@@ -14,9 +14,12 @@ Plus, It's like Thread in another language you can control all workers and limit
 
 ``` js
 const babyWorkers = require('baby-workers');
- 
+
 const workers = new babyWorkers;
- 
+
+// Console Time
+console.time('time');
+
 // Basic worker
 workers.create('basic', (worker, elem) => {
     setTimeout(() => {
@@ -148,6 +151,9 @@ workers.create('errorComplete', (worker) => {
 // All workers has finish
 workers.complete((error, fatalError) => {
      console.log('All "workers" has finished', 'maybe some errors ?', error, fatalError);
+
+     // Console Time
+     console.timeEnd('time');
 });
 ```
 
@@ -171,7 +177,7 @@ stack() : `currentWorker` | PARENT | Run nodes like stack
 timeout(time: `number = 1`) : `currentWorker` | PARENT | Run nodes like run in setTimeout 
 interval(time: `number = 1000`) : `currentWorker` | PARENT | Run nodes like run in setInterval | stop() : `currentWorker`, NODE, Stop interval 
 cancel() : `currentWorker` | PARENT | Cancel current instance and execute complete callback 
-limit | ROOT & PARENT | Limit the number of workers as running
+limit(maxWorkers: `number = 0`) | ROOT & PARENT | Limit the number of workers as running (Default 0 = unlimited or take limit of parent | -1 = unlimited and ignore parent)
 pop() : `currentWorker` | NODE | Stop current node
 addWorker() : `currentWorker` | ALL | Add virtual worker in current worker (it used for external asynch function) 
 removeWorker(isParent: `boolean`) : `currentWorker` | ALL | Remove virtual worker in current worker (it used for external asynch function) 
@@ -189,12 +195,13 @@ getId() : `number` | NODE | Get id of current node worker
 getStatus() : `string` | ALL | Get status of current worker 
 getName() : `string` | ALL | Get name of current worker 
 getType() : `string` | ALL | Return type of current worker
-getWorkers : `number` | ALL | Return the number of workers
-getWaitingWorkers : `number` | ALL | Return the number of waiting workers
-getRunningWorkers : `number` | ALL | Return the number of running workers
-getTotalWorkers : `number` | ALL | Return the total number of workers (nodes included)
-getTotalWaitingWorkers : `number` | ALL | Return the total number of workers (nodes included)
-getTotalRunningWorkers : `number` | ALL | Return the total number of workers (nodes included)
+getLimit() : `number` | ALL | Return the limit of workers allowed in current workers
+getWorkers() : `number` | ALL | Return the number of workers
+getWaitingWorkers() : `number` | ALL | Return the number of waiting workers
+getRunningWorkers() : `number` | ALL | Return the number of running workers
+getTotalWorkers() : `number` | ALL | Return the total number of workers (nodes included)
+getTotalWaitingWorkers() : `number` | ALL | Return the total number of workers (nodes included)
+getTotalRunningWorkers() : `number` | ALL | Return the total number of workers (nodes included)
 
 ## Exemples 2
 

@@ -228,7 +228,11 @@ var Workers = function()
 
 		this.getLimit = function()
 		{
-			return (_parent.maxWorkers == -1 ? -1 : (_parent.maxWorkers + (_engine.parent != null ? _engine.parent.getLimit() : 0)));
+			var maxWorkersParent = (_engine.parent != null ? _engine.parent.getLimit() : 0);
+			maxWorkersParent = (maxWorkersParent == -1 ? 0 : maxWorkersParent);
+			var maxWorkers = (_parent.maxWorkers <= 0 ? _parent.maxWorkers : (_parent.maxWorkers + maxWorkersParent));
+			maxWorkers += (maxWorkersParent === 0 || (maxWorkersParent !== 0 && _parent.maxWorkers === 0) ? 0 : 1);
+			return maxWorkers;
 		}
 
 		this.getWorkers = function()
