@@ -162,12 +162,24 @@ var Workers = function()
 				return ;
 			}
 
-			if (_parent.maxWorkers === 0 && _engine.parent != null && _engine.parent.getLimit() <= _engine.parent.getRunningWorkers() + _engine.this.getRunningWorkers()) {
-				_engine.parent.waiting($waitingNodeCallback(index), true, true);
+			var parent =  $getParentLimit();
+			if (_parent.maxWorkers === 0 && parent != null && parent.getLimit() <= parent.getTotalRunningWorkers() + _engine.this.getRunningWorkers()) {
+				parent.waiting($waitingNodeCallback(index), true, true);
 				return ;
 			}
 
 			$execNodeCallback(index);
+		}
+
+		var $getParentLimit = function(parent)
+		{
+			if (parent === undefined && _engine.parent != null) {
+				return $getParentLimit(_engine.parent);
+			}
+			if (parent !== undefined &&  parent.getLimit() === 0 && typeof(parent.root) === 'function') {
+				return $getParentLimit(parent.root());
+			}
+			return parent;
 		}
 
 		var $waitingNodeCallback = function(index)
