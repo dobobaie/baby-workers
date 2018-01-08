@@ -60,7 +60,6 @@ var Workers = function()
 					delete _engine.this.root;
 				break;
 				case $enum.TYPE.NODE:
-					delete _engine.this.limit;
 					delete _engine.this.cancel;
 					delete _engine.this.timeout;
 					delete _engine.this.interval;
@@ -149,20 +148,22 @@ var Workers = function()
 				$execNodeCallback(index, true);
 				return ;
 			} else if (_parent.stack.status === true) {
-				_parent.waitingWorkers += 1;
-				_engine.this.waiting($waitingNodeCallback(index));
+				_engine.this.waiting($waitingNodeCallback(index), true, true);
 				return ;
 			}
 
 			if (_parent.stack.currentNode > parseInt(index)) {
-				_parent.waitingWorkers += 1;
-				_engine.this.waiting($waitingNodeCallback(index));
+				_engine.this.waiting($waitingNodeCallback(index), true, true);
 				return ;
 			}
 
-			if (_engine.this.getLimit() > 0 && _engine.this.getLimit() <= _parent.runningWorkers) {
-				_parent.waitingWorkers += 1;
-				_engine.this.waiting($waitingNodeCallback(index));
+			if (_parent.maxWorkers > 0 && _parent.maxWorkers <= _parent.runningWorkers) {
+				_engine.this.waiting($waitingNodeCallback(index), true, true);
+				return ;
+			}
+
+			if (_parent.maxWorkers === 0 && _engine.parent != null && _engine.parent.getLimit() <= _engine.parent.getRunningWorkers() + _engine.this.getRunningWorkers()) {
+				_engine.parent.waiting($waitingNodeCallback(index), true, true);
 				return ;
 			}
 
@@ -171,10 +172,8 @@ var Workers = function()
 
 		var $waitingNodeCallback = function(index)
 		{
-			return function(next)
-			{
+			return function(next) {
 				$verifyNodeStatus(index);
-				_parent.waitingWorkers -= 1;
 				next();
 			}
 		}
@@ -228,11 +227,7 @@ var Workers = function()
 
 		this.getLimit = function()
 		{
-			var maxWorkersParent = (_engine.parent != null ? _engine.parent.getLimit() : 0);
-			maxWorkersParent = (maxWorkersParent == -1 ? 0 : maxWorkersParent);
-			var maxWorkers = (_parent.maxWorkers <= 0 ? _parent.maxWorkers : (_parent.maxWorkers + maxWorkersParent));
-			maxWorkers += (maxWorkersParent === 0 || (maxWorkersParent !== 0 && _parent.maxWorkers === 0) ? 0 : 1);
-			return maxWorkers;
+			return _parent.maxWorkers;
 		}
 
 		this.getWorkers = function()
@@ -271,16 +266,23 @@ var Workers = function()
 			return _engine.this;
 		}
 		
-		this.waiting = function(callback, removeAfterCall)
+		this.waiting = function(callback, removeAfterCall, isParent)
 		{
 			_engine.totalWaitingWorkers += 1;
-			if (_engine.parent != null) {
-				return _engine.parent.waiting(callback, removeAfterCall);
+			if (typeof(isParent) === 'boolean' && isParent === true) {
+				_parent.waitingWorkers += 1;
+				_engine.waitingCallback.push({
+					callback: function(next) {
+						_parent.waitingWorkers -= 1;
+						callback(next);
+					},
+					removeAfterCall: removeAfterCall,
+				});
 			}
-			_engine.waitingCallback.push({
-				callback: callback,
-				removeAfterCall: removeAfterCall,
-			});
+			if (_engine.parent != null) {
+				_engine.parent.waiting(callback, removeAfterCall, false);
+				return _engine.this;
+			}
 			return _engine.this;
 		}
 
@@ -330,7 +332,7 @@ var Workers = function()
 	
 			_engine.totalWorkers -= 1;
 
-			if (_engine.parent === null) {
+			if (_parent.waitingWorkers !== 0) {
 				$execWaitingCallback();
 			}
 
