@@ -157,15 +157,17 @@ var Workers = function()
 				return ;
 			}
 
-			if (_parent.maxWorkers > 0 && _parent.maxWorkers <= _parent.runningWorkers) {
+			if (_parent.limitWorkers > 0 && _parent.limitWorkers <= _parent.runningWorkers && _parent.limitExtra === false) {
 				_engine.this.waiting($waitingNodeCallback(index), true, true);
 				return ;
 			}
 
 			var parent =  $getParentLimit();
-			if (_parent.maxWorkers === 0 && parent != null && parent.getLimit() <= parent.getTotalRunningWorkers() + _engine.this.getRunningWorkers()) {
-				parent.waiting($waitingNodeCallback(index), true, true);
-				return ;
+			if ((_parent.limitWorkers === 0 || _parent.limitExtra === true) && parent != null && parent.getLimit() <= parent.getTotalRunningWorkers() + _engine.this.getRunningWorkers()) {
+				if (parent.getLimit() + (_parent.limitExtra == true ? _parent.limitWorkers : 0) <= parent.getTotalRunningWorkers() + _engine.this.getRunningWorkers()) {
+					parent.waiting($waitingNodeCallback(index), true, true);
+					return ;
+				}
 			}
 
 			$execNodeCallback(index);
@@ -176,7 +178,7 @@ var Workers = function()
 			if (parent === undefined && _engine.parent != null) {
 				return $getParentLimit(_engine.parent);
 			}
-			if (parent !== undefined &&  parent.getLimit() === 0 && typeof(parent.root) === 'function') {
+			if (parent !== undefined && parent.getLimit() === 0 && typeof(parent.root) === 'function') {
 				return $getParentLimit(parent.root());
 			}
 			return parent;
@@ -239,7 +241,7 @@ var Workers = function()
 
 		this.getLimit = function()
 		{
-			return _parent.maxWorkers;
+			return _parent.limitWorkers;
 		}
 
 		this.getWorkers = function()
@@ -272,9 +274,11 @@ var Workers = function()
 			return _engine.totalRunningWorkers;
 		}
 
-		this.limit = function(max)
+		this.limit = function(max, extra)
 		{
-			_parent.maxWorkers = max;
+			_parent.limitExtra = (typeof(extra) !== 'boolean' || extra === false ? false : true);
+			_parent.limitWorkers = (max < -1 ? -1 : max);
+			_parent.limitWorkers = (_parent.limitExtra === true && _parent.limitWorkers === -1 ? 0 : _parent.limitWorkers);
 			return _engine.this;
 		}
 		
@@ -452,7 +456,8 @@ var Workers = function()
 		}
 
 		var _parent = {
-			maxWorkers: 0,
+			limitWorkers: 0,
+			limitExtra: false,
 			wasRejected: false,
 			haveInterval: null,
 			nodes: [],

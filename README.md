@@ -75,7 +75,7 @@ stack() : `currentWorker` | PARENT | Run nodes like stack
 timeout(time: `number = 1`) : `currentWorker` | PARENT | Run nodes like run in setTimeout 
 interval(time: `number = 1000`) : `currentWorker` | PARENT | Run nodes like run in setInterval | stop() : `currentWorker`, NODE, Stop interval 
 cancel() : `currentWorker` | PARENT | Cancel current instance and execute complete callback 
-limit(maxWorkers: `number = 0`) | ALL | Limit the number of workers as running (Default 0 = unlimited or take limit of parent | -1 = unlimited and ignore parent)
+limit(maxWorkers: `number = 0`, extra: `boolean = false`) | ALL | Limit the number of workers as running (maxWorkers = 0 = unlimited or take limit of parent | maxWorkers = -1 = unlimited and ignore parent). If extra is enable so maxWorkers is taken ONLY if parent workers limit is full
 pop() : `currentWorker` | NODE | Stop current node
 addWorker() : `currentWorker` | ALL | Add virtual worker in current worker (it used for external asynch function) 
 removeWorker(isParent: `boolean`) : `currentWorker` | ALL | Remove virtual worker in current worker (it used for external asynch function) 
