@@ -49,6 +49,7 @@ More examples at the end of README.md file.
 * [Simulate adding/removing worker](https://raw.githubusercontent.com/dobobaie/baby-workers/master/examples/add_remove_worker.js)
 * [Set timeout](https://raw.githubusercontent.com/dobobaie/baby-workers/master/examples/timeout.js)
 * [Set interval](https://raw.githubusercontent.com/dobobaie/baby-workers/master/examples/interval.js)
+* [Push](https://raw.githubusercontent.com/dobobaie/baby-workers/master/examples/push.js)
 * [Adding data](https://raw.githubusercontent.com/dobobaie/baby-workers/master/examples/data.js)
 * [Cancel worker](https://raw.githubusercontent.com/dobobaie/baby-workers/master/examples/cancel.js)
 * [Limit workers with a queue](https://raw.githubusercontent.com/dobobaie/baby-workers/master/examples/limit.js)
@@ -69,13 +70,14 @@ Launch any request on any element.
 
 Name | Available | Description | Additionnal
 ---- | --------- | ----------- | -----------
-create(name: `string`, callback: `function`, data: `any = undefined`) : `currentWorker` | ALL | Create a new worker
+create(name: `string`, callback: `function`, data: `any = undefined`) : `currentWorker` | ALL | Create a new worker (if data is `null` so no node will be create)
 run() : `currentWorker` | PARENT | Run current worker
 stack() : `currentWorker` | PARENT | Run nodes like stack 
 timeout(time: `number = 1`) : `currentWorker` | PARENT | Run nodes like run in setTimeout 
 interval(time: `number = 1000`) : `currentWorker` | PARENT | Run nodes like run in setInterval | stop() : `currentWorker`, NODE, Stop interval 
+push(data: `any`) : `currentWorker` | PARENT | Push a new node to worker it will be executed if worker is running (if data is `null` so no node will be create)
 cancel() : `currentWorker` | PARENT | Cancel current instance and execute complete callback 
-limit(maxWorkers: `number = 0`) | ALL | Limit the number of workers as running (Default 0 = unlimited or take limit of parent | -1 = unlimited and ignore parent)
+limit(maxWorkers: `number = 0`, extra: `boolean = false`) | ALL | Limit the number of workers as running (`maxWorkers = 0` = unlimited or take limit of parent | `maxWorkers = -1` = unlimited and ignore parent). If `extra = true` is true so maxWorkers is taken ONLY if parent workers limit is full
 pop() : `currentWorker` | NODE | Stop current node
 addWorker() : `currentWorker` | ALL | Add virtual worker in current worker (it used for external asynch function) 
 removeWorker(isParent: `boolean`) : `currentWorker` | ALL | Remove virtual worker in current worker (it used for external asynch function) 
@@ -157,16 +159,28 @@ workers.create('timeout', (worker) => {
     worker.pop();
 }).timeout(1000);
 
+// push worker
+workers.create('pushWorker', (worker, elem) => {
+    console.log('My elem', elem);
+  worker.pop();
+}, null).run();
+workers.pushWorker.complete(() => {
+    console.log('All "pushWorker" has finished');
+}, false); // false = don't destroy callback
+
 // Run worker in a setInterval
 workers.create('interval', (worker) => {
-    console.log('Interval called');
+    console.log('ici');
+    const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    workers.pushWorker.push(possible.charAt(Math.floor(Math.random() * possible.length))); // we adding an element to pushWorker
+
     worker.save(worker.get() + 1);
     worker.pop();
 
     if (worker.get() == 5) {
         workers.interval.stop();
     }
-}).save(0).interval(1000);
+}).save(0).interval(~~(Math.random() * 1000));
 
 // Manipule worker data
 workers.create('data', (worker) => {
