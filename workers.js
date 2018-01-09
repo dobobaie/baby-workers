@@ -42,6 +42,7 @@ var Workers = function()
 			switch (type)
 			{
 				case $enum.TYPE.ROOT:
+					delete _engine.this.push;
 					delete _engine.this.cancel;
 					delete _engine.this.getId;
 					delete _engine.this.timeout;
@@ -60,6 +61,7 @@ var Workers = function()
 					delete _engine.this.root;
 				break;
 				case $enum.TYPE.NODE:
+					delete _engine.this.push;
 					delete _engine.this.cancel;
 					delete _engine.this.timeout;
 					delete _engine.this.interval;
@@ -74,7 +76,7 @@ var Workers = function()
 
 		this.set = function(callback, data)
 		{
-			data = (data == null || Array.isArray(data) == false || data[0] == undefined ? [data] : Object.values(data));
+			data = (data === null && data !== undefined ? [] : (Array.isArray(data) == false || data[0] == undefined ? [data] : Object.values(data)));
 			for (var index in data) {
 				var nodeProcess = new $process(_engine.name);
 				nodeProcess.init(_engine.this, $enum.TYPE.NODE, index);
@@ -129,11 +131,17 @@ var Workers = function()
 		this.run = function()
 		{
 			_engine.status = $enum.STATUS.RUNNING;
+			
 			for (var index in _parent.data) {
 				$verifyNodeStatus(index);
 			}
+
 			if (_parent.haveInterval == null) {
 				_engine.this.removeWorker(false);
+			}
+
+			if (_parent.runningWorkers === 0 && _parent.waitingWorkers === 0 && _engine.status === $enum.STATUS.RUNNING) {
+				_engine.status = $enum.STATUS.FINISH;
 			}
 	
 			delete _engine.this.stack;
@@ -163,7 +171,7 @@ var Workers = function()
 			}
 
 			var parent =  $getParentLimit();
-			if ((_parent.limitWorkers === 0 || _parent.limitExtra === true) && parent != null && parent.getLimit() <= parent.getTotalRunningWorkers() + _engine.this.getRunningWorkers()) {
+			if ((_parent.limitWorkers === 0 || _parent.limitExtra === true) && parent != null && parent.getLimit() > 0 && parent.getLimit() <= parent.getTotalRunningWorkers() + _engine.this.getRunningWorkers()) {
 				if (parent.getLimit() + (_parent.limitExtra == true ? _parent.limitWorkers : 0) <= parent.getTotalRunningWorkers() + _engine.this.getRunningWorkers()) {
 					parent.waiting($waitingNodeCallback(index), true, true);
 					return ;
@@ -201,6 +209,24 @@ var Workers = function()
 			_parent.nodes[index].addWorker(true);
 			_parent.stack.isRunning = $enum.STATUS.RUNNING;
 			_parent.callback(_parent.nodes[index], _parent.data[index]);
+		}
+
+		this.push = function(data)
+		{
+			if (data == null) {
+				return _engine.this;
+			}
+
+			var index = _parent.data.push(data) - 1;
+			var nodeProcess = new $process(_engine.name);
+			nodeProcess.init(_engine.this, $enum.TYPE.NODE, index);
+			_parent.nodes.push(nodeProcess);
+			_parent.workers += 1;
+
+			_engine.status = $enum.STATUS.RUNNING;
+			$verifyNodeStatus(index);
+
+			return _engine.this;
 		}
 
 		this.cancel = function()
@@ -425,6 +451,21 @@ var Workers = function()
 			return (_engine.nodes[key] == undefined ? null : _engine.nodes[key]);
 		}
 
+		this.removeWaitingWorker = function()
+		{
+			_engine.totalWaitingWorkers -= 1;
+			
+			if (_engine.totalWorkers === 0 && _engine.totalWaitingWorkers === 0) {
+				$execCompleteCallback();
+			}
+					
+			if (_engine.parent != null) {
+				_engine.parent.removeWaitingWorker();
+				return _engine.this;
+			}
+			return _engine.this;
+		}
+
 		var $execWaitingCallback = function()
 		{
 			var copyCallback = _engine.waitingCallback;
@@ -433,13 +474,7 @@ var Workers = function()
 				if (typeof(copyCallback[index].removeAfterCall) == 'boolean' && copyCallback[index].removeAfterCall == false) {
 					_engine.waitingCallback.push(copyCallback[index]);
 				}
-				copyCallback[index].callback(function() {
-					_engine.totalWaitingWorkers -= 1;
-					if (_engine.totalWorkers === 0 && _engine.totalWaitingWorkers === 0) {
-						$execCompleteCallback();
-					}
-					return _engine.this;
-				});
+				copyCallback[index].callback(_engine.this.removeWaitingWorker);
 			}
 		}
 
