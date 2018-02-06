@@ -300,6 +300,11 @@ var Workers = function()
 			return _engine.totalRunningWorkers;
 		}
 
+		this.getNodes = function()
+		{
+			return _parent.nodes;
+		}
+
 		this.limit = function(max, extra)
 		{
 			_parent.limitExtra = (typeof(extra) !== 'boolean' || extra === false ? false : true);
@@ -448,7 +453,7 @@ var Workers = function()
 
 		this.node = function(key)
 		{
-			return (_engine.nodes[key] == undefined ? null : _engine.nodes[key]);
+			return (_parent.nodes[key] == undefined ? null : _parent.nodes[key]);
 		}
 
 		this.removeWaitingWorker = function()

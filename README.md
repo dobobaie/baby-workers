@@ -95,6 +95,7 @@ getId() : `number` | NODE | Get id of current node worker
 getStatus() : `string` | ALL | Get status of current worker 
 getName() : `string` | ALL | Get name of current worker 
 getType() : `string` | ALL | Return type of current worker
+getNodes() : `array` | PARENT | Return all nodes
 getLimit() : `number` | ALL | Return the limit of workers allowed in current workers
 getWorkers() : `number` | ALL | Return the number of workers
 getWaitingWorkers() : `number` | ALL | Return the number of waiting workers
