@@ -1,5 +1,5 @@
 # Workers Javascript
-Manage your functions asynchronously or as stack/timeout/interval/queue with baby-workers.
+Manage your functions asynchronously or as stack/timeout/interval/queue with baby-workers and promises.
 
 ## Install
 
@@ -7,6 +7,13 @@ Manage your functions asynchronously or as stack/timeout/interval/queue with bab
 npm install --save baby-workers
 
 ``` 
+
+## Last release
+
+Version | Change log | Compatibility
+---- | --------- | -----------
+2.0.0 | Add promises after run/timeout/interval/stack function + add then/catch callback + catch error in run/timeout/interval/stack callback + add feature to create worker without name | >= 2.0.0
+1.0.71 | Add getNodes function | <= 1.0.71
 
 ## Usage
 Create as much workers that you need, for a simple function or for each element of an array, they will be executed in specific callback !
@@ -21,20 +28,36 @@ const workers = new babyWorkers;
 console.time('time');
 
 // Basic worker
-workers.create('basic', (worker, elem) => { // Create worker with : name, callback, data
+workers.create((worker, elem) => {
+    setTimeout(() => {
+        console.log('unknown =>', elem, ' - ', 'my id =>', worker.getId());
+        worker.pop();
+    }, (~~(Math.random() * 1000)));
+}, ['a', 'b', 'c', 'd']).run().then((data) => {
+    console.log('Unknown Promises then', data);
+}).catch((data) => {
+    console.log('Unknown Promises catch', data);
+});
+
+// Basic worker with a name
+workers.create('basic', (worker, elem) => {
     setTimeout(() => {
         console.log('basic =>', elem, ' - ', 'my id =>', worker.getId());
-        worker.pop(); // Finish current node
+        worker.pop();
     }, (~~(Math.random() * 1000)));
-}, ['a', 'b', 'c', 'd']).run(); // Data are an array so each elements will be browse and executed from callback
+}, ['e', 'f', 'g', 'h']).run();
 
 workers.basic.complete(() => {
-    console.log('All "basic" workers has finished');
+    console.log('All "basic" has finished');
+}).then((data) => {
+    console.log('Basic Then', data);
+}).catch((data) => {
+    console.log('Basic Catch', data);
 });
 
 // All workers has finish
-workers.complete((error, fatalError) => {
-     console.log('All "workers" has finished', 'maybe some errors ?', error, fatalError);
+workers.complete((error) => {
+     console.log('All "workers" has finished', 'maybe some errors ?', error);
 
      // Console Time
      console.timeEnd('time');
@@ -45,6 +68,7 @@ More examples at the end of README.md file.
 
 ## Demos
 * [Basic](https://raw.githubusercontent.com/dobobaie/baby-workers/master/examples/basic.js)
+* [Promises](https://raw.githubusercontent.com/dobobaie/baby-workers/master/examples/promises.js)
 * [Stack](https://raw.githubusercontent.com/dobobaie/baby-workers/master/examples/stack.js)
 * [Simulate adding/removing worker](https://raw.githubusercontent.com/dobobaie/baby-workers/master/examples/add_remove_worker.js)
 * [Set timeout](https://raw.githubusercontent.com/dobobaie/baby-workers/master/examples/timeout.js)
@@ -71,18 +95,20 @@ Launch any request on any element.
 Name | Available | Description | Additionnal
 ---- | --------- | ----------- | -----------
 create(name: `string`, callback: `function`, data: `any = undefined`) : `currentWorker` | ALL | Create a new worker (if data is `null` so no node will be create)
-run() : `currentWorker` | PARENT | Run current worker
-stack() : `currentWorker` | PARENT | Run nodes like stack 
-timeout(time: `number = 1`) : `currentWorker` | PARENT | Run nodes like run in setTimeout 
-interval(time: `number = 1000`) : `currentWorker` | PARENT | Run nodes like run in setInterval | stop() : `currentWorker`, NODE, Stop interval 
+run() : `Promises` | PARENT | Run current worker
+stack() : `Promises` | PARENT | Run nodes like stack 
+timeout(time: `number = 1`) : `Promises` | PARENT | Run nodes like run in setTimeout 
+interval(time: `number = 1000`) : `Promises` | PARENT | Run nodes like run in setInterval | stop() : `currentWorker`, NODE, Stop interval 
 push(data: `any`) : `currentWorker` | PARENT | Push a new node to worker it will be executed if worker is running (if data is `null` so no node will be create)
 cancel() : `currentWorker` | PARENT | Cancel current instance and execute complete callback 
 limit(maxWorkers: `number = 0`, extra: `boolean = false`) | ALL | Limit the number of workers as running (`maxWorkers = 0` = unlimited or take limit of parent | `maxWorkers = -1` = unlimited and ignore parent). If `extra = true` is true so maxWorkers is taken ONLY if parent workers limit is full
 pop() : `currentWorker` | NODE | Stop current node
 addWorker() : `currentWorker` | ALL | Add virtual worker in current worker (it used for external asynch function) 
-removeWorker(isParent: `boolean`) : `currentWorker` | ALL | Remove virtual worker in current worker (it used for external asynch function) 
+removeWorker() : `currentWorker` | ALL | Remove virtual worker in current worker (it used for external asynch function) 
 complete(callback: `function`, removeAfterCall: `boolean`) : `currentWorker` | ALL | Call function when current process is finish (node, parent => when childrens are finish or root => when childrens are finish) 
-error(error: `string`, fatalError: `string`) : `currentWorker` | ALL | Set error in current worker and all parent in the tree
+then(callback: `function`, removeAfterCall: `boolean`) : `currentWorker` | ALL | Call function when current process is finish without error
+catch(callback: `function`, removeAfterCall: `boolean`) : `currentWorker` | ALL | Call function when current process is finish with error 
+error(error: `string`) : `currentWorker` | ALL | Set error in current worker and all parent in the tree
 save(data: `any`) : `currentWorker` | ALL | Save any data in current worker (node, parent or root) 
 _save(data: `any`) : `currentWorker` | ALL | Save any data in current worker (node, parent or root) from root
 get() : `any` | ALL | Get data previously saved 
@@ -93,6 +119,7 @@ parentNode(name: `string`) : `parentWorker OR nodeWorker` | PARENT & NODE | Get 
 node(key: `number`) : `nodeWorker` | PARENT | Get direct node going down the tree 
 getId() : `number` | NODE | Get id of current node worker 
 getStatus() : `string` | ALL | Get status of current worker 
+getNodeStatus() : `string` | NODE | Get node status of current worker 
 getName() : `string` | ALL | Get name of current worker 
 getType() : `string` | ALL | Return type of current worker
 getNodes() : `array` | PARENT | Return all nodes
@@ -115,14 +142,45 @@ const workers = new babyWorkers;
 console.time('time');
 
 // Basic worker
+workers.create((worker, elem) => {
+    setTimeout(() => {
+        console.log('unknown =>', elem, ' - ', 'my id =>', worker.getId());
+        worker.pop();
+    }, (~~(Math.random() * 1000)));
+}, ['a', 'b', 'c', 'd']).run().then((data) => {
+    console.log('Unknown Promises then', data);
+}).catch((data) => {
+    console.log('Unknown Promises catch', data);
+});
+
+// Basic worker with a name
 workers.create('basic', (worker, elem) => {
     setTimeout(() => {
         console.log('basic =>', elem, ' - ', 'my id =>', worker.getId());
         worker.pop();
     }, (~~(Math.random() * 1000)));
-}, ['a', 'b', 'c', 'd']).run();
+}, ['e', 'f', 'g', 'h']).run();
+
 workers.basic.complete(() => {
     console.log('All "basic" has finished');
+}).then((data) => {
+    console.log('Basic Then', data);
+}).catch((data) => {
+    console.log('Basic Catch', data);
+});
+
+// Promises error worker
+workers.create('promises', (worker, elem) => {
+    worker.error('There are an error').pop(); // pop is important !
+}, 'Test promises').run().catch((error) => {
+    console.log('Promises catch', '"', error, '"');
+});
+
+// Promises without error worker
+workers.create('promises2', (worker, elem) => {
+    worker._save('There are no error !').pop(); // pop is important !
+}, 'Test promises').run().then((data) => {
+    console.log('Promises then', '"', data, '"');
 });
 
 // Stack worker 
@@ -171,7 +229,6 @@ workers.pushWorker.complete(() => {
 
 // Run worker in a setInterval
 workers.create('interval', (worker) => {
-    console.log('ici');
     const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     workers.pushWorker.push(possible.charAt(Math.floor(Math.random() * possible.length))); // we adding an element to pushWorker
 
@@ -255,8 +312,12 @@ workers.create('errorComplete', (worker) => {
 }).run()
 
 // All workers has finish
-workers.complete((error, fatalError) => {
-     console.log('All "workers" has finished', 'maybe some errors ?', error, fatalError);
+workers.then(() => {
+    console.log('All "workers" has finished', 'Then is called');
+}).catch(() => {
+    console.log('All "workers" has finished', 'Catch is called');
+}).complete((error) => {
+     console.log('All "workers" has finished', 'maybe some errors ?', error);
 
      // Console Time
      console.timeEnd('time');

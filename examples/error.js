@@ -12,8 +12,8 @@ workers.create('errorComplete', (worker) => {
 }).run()
 
 // All workers has finish
-workers.complete((error, fatalError) => {
-    console.log('All "workers" has finished', 'maybe some errors ?', error, fatalError);
+workers.complete((error) => {
+    console.log('All "workers" has finished', 'maybe some errors ?', error);
 
     // Console Time
     console.timeEnd('time');

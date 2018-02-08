@@ -6,14 +6,45 @@ const workers = new babyWorkers;
 console.time('time');
 
 // Basic worker
+workers.create((worker, elem) => {
+    setTimeout(() => {
+        console.log('unknown =>', elem, ' - ', 'my id =>', worker.getId());
+        worker.pop();
+    }, (~~(Math.random() * 1000)));
+}, ['a', 'b', 'c', 'd']).run().then((data) => {
+    console.log('Unknown Promises then', data);
+}).catch((data) => {
+    console.log('Unknown Promises catch', data);
+});
+
+// Basic worker with a name
 workers.create('basic', (worker, elem) => {
     setTimeout(() => {
         console.log('basic =>', elem, ' - ', 'my id =>', worker.getId());
         worker.pop();
     }, (~~(Math.random() * 1000)));
-}, ['a', 'b', 'c', 'd']).run();
+}, ['e', 'f', 'g', 'h']).run();
+
 workers.basic.complete(() => {
     console.log('All "basic" has finished');
+}).then((data) => {
+    console.log('Basic Then', data);
+}).catch((data) => {
+    console.log('Basic Catch', data);
+});
+
+// Promises error worker
+workers.create('promises', (worker, elem) => {
+    worker.error('There are an error').pop(); // pop is important !
+}, 'Test promises').run().catch((error) => {
+    console.log('Promises catch', '"', error, '"');
+});
+
+// Promises without error worker
+workers.create('promises2', (worker, elem) => {
+    worker._save('There are no error !').pop(); // pop is important !
+}, 'Test promises').run().then((data) => {
+    console.log('Promises then', '"', data, '"');
 });
 
 // Stack worker 
@@ -140,13 +171,17 @@ var a = workers.create('limitWorker', (worker, randomValue) => {
 
 // Set errors
 workers.create('errorComplete', (worker) => {
-    worker.error('Why ?', 'Because you stole my bread dude...')
+    worker.error('Why ?', 'Because you stole my bread dude...');
     worker.pop();
 }).run()
 
 // All workers has finish
-workers.complete((error, fatalError) => {
-     console.log('All "workers" has finished', 'maybe some errors ?', error, fatalError);
+workers.then(() => {
+    console.log('All "workers" has finished', 'Then is called');
+}).catch(() => {
+    console.log('All "workers" has finished', 'Catch is called');
+}).complete((error) => {
+     console.log('All "workers" has finished', 'maybe some errors ?', error);
 
      // Console Time
      console.timeEnd('time');
