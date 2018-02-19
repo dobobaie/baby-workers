@@ -7,8 +7,7 @@ console.time('time');
 
 // Set errors
 workers.create('errorComplete', (worker) => {
-    worker.error('Why ?', 'Because you stole my bread dude...')
-    worker.pop();
+    worker.error('Why ?', 'Because you stole my bread dude...');
 }).run()
 
 // All workers has finish

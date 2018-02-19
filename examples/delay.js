@@ -5,16 +5,11 @@ const workers = new babyWorkers;
 // Console Time
 console.time('time');
 
-// Run worker in a setInterval
-workers.create('interval', (worker) => {
-    console.log('Interval called');
-    worker._save(worker._get() + 1);
+// Run worker in a timeout
+workers.create('Delay', (worker) => {
+    console.log('Delay called');
     worker.pop();
-
-    if (worker._get() === 5) {
-        workers.interval.stop();
-    }
-}).save(0).interval(1000);
+}).delay(1000);
 
 // All workers has finish
 workers.complete((error) => {

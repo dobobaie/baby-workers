@@ -10,12 +10,12 @@ const runMe = workers.create('cancel', (worker) => {
     console.log('Here is never called');
     worker.pop();
 });
+
+// process
+
 runMe.cancel();
 
 // All workers has finish
 workers.complete((error) => {
-    console.log('All "workers" has finished', 'maybe some errors ?', error);
-
-    // Console Time
-    console.timeEnd('time');
+    console.log('Worker was canceled so workers.complete is never called');
 });

@@ -9,7 +9,8 @@ console.time('time');
 workers.create('pushWorker', (worker, elem) => {
   console.log('My elem', elem);
   worker.pop();
-}, null).run();
+}).run();
+
 workers.pushWorker.complete(() => {
     console.log('All "pushWorker" has finished');
 }, false); // false = don't destroy callback
@@ -19,10 +20,10 @@ workers.create('interval', (worker) => {
     const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     workers.pushWorker.push(possible.charAt(Math.floor(Math.random() * possible.length))); // we adding an element to pushWorker
 
-    worker.save(worker.get() + 1);
+    worker._save(worker._get() + 1);
     worker.pop();
 
-    if (worker.get() == 5) {
+    if (worker._get() == 5) {
         workers.interval.stop();
     }
 }).save(0).interval(~~(Math.random() * 1000));

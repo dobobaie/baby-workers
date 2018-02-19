@@ -14,7 +14,7 @@ workers.create('data', (worker) => {
     worker._save(tab); // new version to save data from root
     worker.save('coucou is my name');
     
-    worker.create('data2', (worker) => {
+    worker.create((worker) => {
         var tab = worker.parent('data').get();
         tab.push(worker.parentNode('data').get());
         worker.parent('data').save(tab);
@@ -27,6 +27,12 @@ workers.create('data', (worker) => {
     });
     worker.pop();
 }).save([]).run();
+
+// Manipule worker data
+workers.create('data2', (worker) => {
+    console.log(worker._get());
+    worker.pop();
+}).save('elements.0.element.1.toto', []).run();
 
 // All workers has finish
 workers.complete((error) => {

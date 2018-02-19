@@ -8,13 +8,14 @@ var Workers = function()
 			NODE: 'node',
 		},
 		STATUS: {
+			CANCEL: 'cancel',
 			WAITING: 'waiting',
 			RUNNING: 'running',
 			FINISH: 'finish',
 		},
 	};
 
-	Object.values = (typeof(Object.values) != 'function' ? function(data) {
+	Object.values = (typeof(Object.values) !== 'function' ? function(data) {
 		return Object.keys(data).map(function(key) {
 		   return data[key];
 		});
@@ -22,9 +23,10 @@ var Workers = function()
 
 	var $process = function(processName)
 	{
+		this.flux = {};
+
 		this.create = function(name, callback, data)
 		{
-			data = (typeof(name) === 'function' ? callback : data);
 			callback = (typeof(name) === 'function' ? name : callback);
 			name = (typeof(name) === 'function' ? null : name);
 
@@ -34,7 +36,19 @@ var Workers = function()
 			
 			_engine.children[name] = new $process(name);
 			_engine.children[name].init(_engine.this, $enum.TYPE.PARENT);
-			_engine.children[name].set(callback, data);
+			_engine.children[name].setInfos(callback);
+
+			// deprected, to remove in v2.5.0
+			data = (typeof(name) === 'function' ? callback : data);
+			if (data !== undefined) {
+				console.log('baby-worker : create function => data parameter is deprecated. It will be remove in v2.5.0');
+			}
+			if (Array.isArray(data) === true) {
+				_engine.children[name].map(data);
+			} else if (data !== undefined) {
+				_engine.children[name].set(data);
+			}
+			// end
 
 			if (name !== null) {
 				_engine.this[name] = _engine.children[name];
@@ -44,39 +58,56 @@ var Workers = function()
 
 		this.init = function(parent, type, id)
 		{
-			_engine.parent = parent;
-			_engine.type = type;
 			_engine.id = id;
+			_engine.type = type;
+			_engine.parent = parent;
+
 			switch (type)
 			{
 				case $enum.TYPE.ROOT:
-					delete _engine.this.push;
-					delete _engine.this.cancel;
-					delete _engine.this.getId;
+					delete _engine.this.setInfos;
+					delete _engine.this.set;
+					delete _engine.this.map;
+
 					delete _engine.this.timeout;
 					delete _engine.this.interval;
 					delete _engine.this.run;
 					delete _engine.this.stack;
-					delete _engine.this.pop;
-					delete _engine.this.set;
-					delete _engine.this.parent;
-					delete _engine.this.root;
+					
+					delete _engine.this.push;
+					delete _engine.this.cancel;
 					delete _engine.this.node;
+					
+					delete _engine.this.pop;
+					delete _engine.this.root;
+					delete _engine.this.parent;
+					
+					delete _engine.this.back;
+			
+					delete _engine.this.getId;
 					delete _engine.this.getNodeStatus;
 				break;
 				case $enum.TYPE.PARENT:
-					delete _engine.this.getId;
 					delete _engine.this.pop;
 					delete _engine.this.root;
+					
+					delete _engine.this.getId;
 					delete _engine.this.getNodeStatus;
 				break;
 				case $enum.TYPE.NODE:
-					delete _engine.this.push;
-					delete _engine.this.cancel;
+					delete _engine.this.setInfos;
+					delete _engine.this.set;
+					delete _engine.this.map;
+					
 					delete _engine.this.timeout;
 					delete _engine.this.interval;
 					delete _engine.this.run;
 					delete _engine.this.stack;
+					
+					delete _engine.this.back;
+			
+					delete _engine.this.cancel;
+					delete _engine.this.push;
 					delete _engine.this.node;
 				break;
 			}
@@ -84,34 +115,60 @@ var Workers = function()
 			return _engine.this;
 		}
 
-		this.set = function(callback, data)
+		this.setInfos = function(callback)
 		{
-			data = (data === null && data !== undefined ? [] : (Array.isArray(data) == false || data[0] == undefined ? [data] : Object.values(data)));
-			for (var index in data) {
-				var nodeProcess = new $process(_engine.name);
-				nodeProcess.init(_engine.this, $enum.TYPE.NODE, index);
-				_parent.nodes.push(nodeProcess);
-				_parent.workers += 1;
-			}
-			_parent.data = data;
 			_parent.callback = callback;
 			_engine.status = $enum.STATUS.WAITING;
-			_engine.this.addWorker();
-			delete _engine.this.set;
+			delete _engine.this.setInfos;
 			return _engine.this;
 		}
 
+		//-- --//
+		this.map = function(arr)
+		{
+			if (Array.isArray(arr) === false) {
+				return _engine.this.set(arr);
+			}
+			_parent.data = arr;
+			return _engine.this;
+		}
+
+		this.push = function(data)
+		{
+			var idElement = _parent.data.push(data) - 1;
+
+			if (_engine.type === $enum.TYPE.PARENT && _engine.status === $enum.STATUS.FINISH) {
+				_engine.this.next();
+			}
+			return _engine.this;
+		}
+
+		this.set = function(data)
+		{
+			_parent.data = [data];
+			return _engine.this;
+		}
+
+		//-- --//
 		this.stack = function()
 		{
 			_parent.stack.status = true;
-			_engine.this.run();
+			_engine.this.next();
 
 			return new Promise(function(resolve, reject) {
 				_engine.this.then(resolve).catch(reject);
 			});
 		}
 
+		// deprecated, to remove in v2.5.0
 		this.timeout = function(time)
+		{
+			console.log('baby-worker : timeout function is deprecated. It will be remove in v2.5.0');
+			return _engine.this.delay(time);
+		}
+		// end
+
+		this.delay = function(time)
 		{
 			time = (time == null || typeof(time) != 'number' ? 1 : time);
 			setTimeout(_engine.this.run, time);
@@ -124,10 +181,13 @@ var Workers = function()
 		this.interval = function(time)
 		{
 			time = (time == null || typeof(time) != 'number' ? 1000 : time);
-			_parent.haveInterval = setInterval(_engine.this.run, time);
+			_engine.this.addWorker(true);
+			_parent.isInterval = setInterval(function() {
+				_engine.this.reply();
+			}, time);
 			_engine.this.stop = function() {
-				_engine.this.removeWorker(false);
-				clearInterval(_parent.haveInterval);
+				_engine.this.removeWorker();
+				clearInterval(_parent.isInterval);
 			};
 
 			return new Promise(function(resolve, reject) {
@@ -137,54 +197,114 @@ var Workers = function()
 
 		this.run = function()
 		{
-			_engine.status = $enum.STATUS.RUNNING;
-			
-			for (var index in _parent.data) {
-				$verifyNodeStatus(index);
-			}
-
-			if (_parent.haveInterval == null) {
-				_engine.this.removeWorker(false);
-			}
-
-			if (_parent.runningWorkers === 0 && _parent.waitingWorkers === 0 && _engine.status === $enum.STATUS.RUNNING) {
-				_engine.status = $enum.STATUS.FINISH;
-			}
-	
-			return new Promise(function(resolve, reject) {
-				_engine.this.then(resolve).catch(reject);
-			});
+			while (_engine.this.next());
+			return _engine.this;
 		}
 
-		var $verifyNodeStatus = function(index)
+		this.reply = function(idNode)
 		{
-			if (_parent.stack.status === true && _parent.stack.currentNode === parseInt(index) && _parent.stack.isRunning === $enum.STATUS.WAITING) {
-				$execNodeCallback(index, true);
-				return ;
-			} else if (_parent.stack.status === true) {
-				_engine.this.waiting($waitingNodeCallback(index), true, true);
+			if (idNode === undefined) {
+				if (_parent.data.length === 0) {
+					_parent.data.push(undefined);
+				}
+				_parent.data.map(function(elem, key) {
+					_engine.this.exec(key, true);
+				});
+				return _engine.this;
+			}
+			return _engine.this.exec(idNode, true);
+		}
+
+		this.next = function()
+		{
+			_parent.currentSeek += 1;
+			if (_engine.this.exec(_parent.currentSeek, false) === null) {
+				_parent.currentSeek -= 1;
+				return null;
+			}
+			return _engine.this;
+		}
+
+		this.exec = function(idNode, forceId)
+		{
+			forceId = (typeof(forceId) === 'boolean' ? forceId : true);
+
+			if (_parent.data.length <= idNode) {
+				if (idNode !== 0) {
+					return null;
+				}
+				_parent.data.push(undefined);
+			}
+			
+			if (_parent.nodes[idNode] === undefined) {
+				var nodeProcess = new $process(_engine.name);
+				nodeProcess.init(_engine.this, $enum.TYPE.NODE, idNode);
+				_parent.nodes.push(nodeProcess);
+				_parent.workers += 1;
+			}
+
+			$verifyNodeStatus(idNode, forceId);
+			return _engine.this;
+		}
+
+		var $verifyNodeStatus = function(idNode, forceId)
+		{
+			if (_engine.status === $enum.STATUS.CANCEL) {
 				return ;
 			}
 
-			if (_parent.stack.currentNode > parseInt(index)) {
-				_engine.this.waiting($waitingNodeCallback(index), true, true);
-				return ;
+			if (_parent.stack.currentNode + 1 !== idNode && forceId === false) {
+				_engine.this.back(function() {
+					$execCallback('waiting');
+				}, false);
+				return $waitingNode(idNode, forceId);
 			}
 
-			if (_parent.limitWorkers > 0 && _parent.limitWorkers <= _parent.runningWorkers && _parent.limitExtra === false) {
-				_engine.this.waiting($waitingNodeCallback(index), true, true);
-				return ;
-			}
+			var parent = $getParentLimit();
+			
+			if (_parent.limitWorkers > 0 && _parent.limitWorkers <= _parent.runningWorkers) {
+				if (_parent.limitExtra ===  false || parent === null || (parent.getLimit() > 0 && parent.getLimit() + _parent.limitWorkers <= parent.getTotalRunningWorkers() + _engine.this.getRunningWorkers())) {
+					
+					// to opti
+					if (_engine.this.getRunningWorkers() === 0 && parent !== null && typeof(parent.back) === 'function') {
+						parent.back(function() {
+							$execCallback('waiting');
+						}, false);
+					} else {
+						_engine.this.back(function() {
+							$execCallback('waiting');
+						}, false);
+					}
+					//
 
-			var parent =  $getParentLimit();
-			if ((_parent.limitWorkers === 0 || _parent.limitExtra === true) && parent != null && parent.getLimit() > 0 && parent.getLimit() <= parent.getTotalRunningWorkers() + _engine.this.getRunningWorkers()) {
-				if (parent.getLimit() + (_parent.limitExtra == true ? _parent.limitWorkers : 0) <= parent.getTotalRunningWorkers() + _engine.this.getRunningWorkers()) {
-					parent.waiting($waitingNodeCallback(index), true, true);
-					return ;
+					return $waitingNode(idNode, forceId);
 				}
 			}
 
-			$execNodeCallback(index);
+			if (_parent.limitWorkers === 0 && parent !== null && parent.getLimit() > 0 && parent.getLimit() <= parent.getTotalRunningWorkers() + _engine.this.getRunningWorkers()) {
+				
+				// to opti
+				if (_engine.this.getRunningWorkers() === 0 && parent !== null && typeof(parent.back) === 'function') {
+					parent.back(function() {
+						$execCallback('waiting');
+					}, false);
+				} else {
+					_engine.this.back(function() {
+						$execCallback('waiting');
+					}, false);
+				}
+				//
+
+				return $waitingNode(idNode, forceId);
+			}
+
+			if (_parent.stack.status === true && _parent.stack.isRunning !== $enum.STATUS.WAITING) {
+				_engine.this.back(function() {
+					$execCallback('waiting');
+				}, false);
+				return $waitingNode(idNode, forceId);
+			}
+			return $execNodeCallback(idNode, forceId);
 		}
 
 		var $getParentLimit = function(parent)
@@ -198,192 +318,225 @@ var Workers = function()
 			return parent;
 		}
 
-		var $waitingNodeCallback = function(index)
+		var $waitingNode = function(idNode, forceId)
 		{
-			return function(next) {
-				$verifyNodeStatus(index);
-				next();
-			}
+			_parent.waitingWorkers += 1;
+			_engine.this.addWaitingWorker();
+			$on('waiting', function(next) {
+				_parent.waitingWorkers -= 1;
+				_engine.this.removeWaitingWorker();
+				$verifyNodeStatus(idNode, forceId);
+			});
+			return false;
 		}
 
-		var $execNodeCallback = function(index, continueNode)
+		var $execNodeCallback = function(idNode, forceId)
 		{
-			if (continueNode === false) {
+			if (forceId === false) {
 				_parent.stack.currentNode += 1;
 			}
+
 			_parent.runningWorkers += 1;
-			_parent.nodes[index].addWorker(true, true);
 			_parent.stack.isRunning = $enum.STATUS.RUNNING;
-			
-			try {
-				_parent.callback(_parent.nodes[index], _parent.data[index]);
-			} catch (e) {
-				_parent.nodes[index].error(e);
-				_parent.nodes[index].pop();
-			}
-		}
-
-		this.push = function(data)
-		{
-			if (data == null) {
-				return _engine.this;
-			}
-
-			var index = _parent.data.push(data) - 1;
-			var nodeProcess = new $process(_engine.name);
-			nodeProcess.init(_engine.this, $enum.TYPE.NODE, index);
-			_parent.nodes.push(nodeProcess);
-			_parent.workers += 1;
-
-			_engine.status = $enum.STATUS.RUNNING;
-			$verifyNodeStatus(index);
-
-			return _engine.this;
-		}
-
-		this.cancel = function()
-		{
-			_engine.this.removeWorker(true, true);
-			return _engine.this;
-		}
-
-		this.pop = function()
-		{
-			if (_engine.nodeStatus == $enum.STATUS.FINISH) {
-				return ;
-			}
-
-			_engine.totalWorkers -= 1;
-			if (_engine.totalWorkers === 0 && _engine.totalWaitingWorkers === 0) {
-				if (_engine.error !== null) {
-					$execCallback('catch');
-				} else {
-					$execCallback('then');
+			_parent.nodes[idNode].addWorker(true);
+			_parent.nodes[idNode].complete(function() {
+				_parent.runningWorkers -= 1;
+				if (_parent.stack.status === true && _parent.stack.currentNode < _parent.data.length) {
+					_parent.stack.isRunning = $enum.STATUS.WAITING;
+					_engine.this.next();
+				} else if (_parent.waitingWorkers !== 0) {
+					_parent.stack.isRunning = $enum.STATUS.WAITING;
+					_engine.this.next();
+				} else if (_parent.isInterval === null) {
+					_parent.stack.isRunning = $enum.STATUS.FINISH;
 				}
-				$execCallback('complete');
+			});
+
+			try {
+				_parent.callback(_parent.nodes[idNode], _parent.data[idNode]);
+			} catch (e) {
+				_parent.nodes[idNode].error(e);
 			}
-			_engine.parent.removeWorker(true, true);
-			return _engine.this;
+			return true;
 		}
 
+		//-- --//
 		this.limit = function(max, extra)
 		{
-			_parent.limitExtra = (typeof(extra) !== 'boolean' || extra === false ? false : true);
+			_parent.limitExtra = (typeof(extra) === 'boolean' ? extra : false);
 			_parent.limitWorkers = (max < -1 ? -1 : max);
 			_parent.limitWorkers = (_parent.limitExtra === true && _parent.limitWorkers === -1 ? 0 : _parent.limitWorkers);
 			return _engine.this;
 		}
 		
-		this.addWorker = function(isParent, isRunning)
+		this.cancel = function()
 		{
-			if (typeof(isParent) === 'boolean' && isParent === true) {
-				_engine.nodeStatus = $enum.STATUS.RUNNING;
+			if (_engine.status === $enum.STATUS.FINISH || _engine.status === $enum.STATUS.CANCEL) {
+				return null;
 			}
 
-			if (typeof(isRunning) === 'boolean' && isRunning === true) {
-				_engine.totalRunningWorkers += 1;
-			}
+			_engine.status = $enum.STATUS.CANCEL;
+			// _engine.this.removeWorker();
+			return _engine.this;
+		}
 
-			_engine.totalWorkers += 1;
+		//-- --//
+		this.error = function(error, isWorker)
+		{
+			isWorker = (typeof(isWorker) === 'boolean' ? isWorker : true);
+
+			_engine.error = (_engine.error === null ? error : _engine.error);
 			if (_engine.parent !== null) {
-				_engine.parent.addWorker(false, isRunning);
+				_engine.parent.error(_engine.error, false);
+			}
+			if (isWorker === true) {
+				_engine.this.pop();
 			}
 			return _engine.this;
 		}
 
-		this.removeWorker = function(isParent, isRunning)
+		this.pop = function()
 		{
-			if (typeof(isParent) === 'boolean' && isParent === true) {
-				_parent.workers -= 1;
-				_parent.runningWorkers -= 1;
-				_engine.status = $enum.STATUS.FINISH;
+			if (_engine.nodeStatus !== $enum.STATUS.RUNNING) {
+				return null;
+			}
+			return _engine.this.removeWorker();
+		}
+
+		//-- --//
+		this.addWorker = function(isWorker)
+		{
+			isWorker = (typeof(isWorker) === 'boolean' ? isWorker : false);
+
+			_engine.status = $enum.STATUS.RUNNING;
+
+			if (isWorker === false) {
+				_engine.totalRunningWorkers += 1;
+			} else {
+				_engine.nodeStatus = $enum.STATUS.RUNNING;
+			}
+
+			// console.log('add', _engine.type, _engine.name, _engine.id, _engine.totalRunningWorkers, _engine.totalWaitingWorkers);
+
+			if (_engine.parent !== null) {
+				_engine.parent.addWorker(false);
+			}
+			return _engine.this;
+		}
+
+		this.removeWorker = function(idNode)
+		{
+			if (idNode === undefined && _engine.type === $enum.TYPE.NODE) {
 				_engine.nodeStatus = $enum.STATUS.FINISH;
-				if (_parent.stack.status === true) {
-					_parent.stack.currentNode += 1;
-					_parent.stack.isRunning = $enum.STATUS.WAITING;
-				}
-			}
+					
+				idNode = _engine.id;
 
-			if (typeof(isRunning) === 'boolean' && isRunning === true) {
-				_engine.totalRunningWorkers -= 1;
-			}
-	
-			_engine.totalWorkers -= 1;
-
-			if (_parent.waitingWorkers !== 0) {
-				$execCallback('waiting');
-			}
-
-			if (_engine.totalWorkers === 0 && _engine.totalWaitingWorkers === 0) {
 				if (_engine.error !== null) {
 					$execCallback('catch');
 				} else {
 					$execCallback('then');
 				}
 				$execCallback('complete');
+			} else {
+				_engine.totalRunningWorkers -= 1;
+
+				if (idNode !== undefined) {
+					$execCallback('back', idNode);
+				}
+				
+				if (_engine.totalRunningWorkers === 0 && _engine.totalWaitingWorkers !== 0) {
+					$execCallback('waiting');
+					_engine.status = $enum.STATUS.WAITING;
+				}
+
+				if (_engine.totalRunningWorkers === 0 && _engine.totalWaitingWorkers === 0) {
+					
+					if (_engine.error !== null) {
+						$execCallback('catch');
+					} else {
+						$execCallback('then');
+					}
+					$execCallback('complete');
+
+					_engine.status = (_engine.status === $enum.STATUS.CANCEL ? _engine.status : $enum.STATUS.FINISH);
+				}
 			}
-			
+
+			// console.log('remove', _engine.type, _engine.name, idNode, _engine.totalRunningWorkers, _engine.totalWaitingWorkers);
+
 			if (_engine.parent !== null) {
-				_engine.parent.removeWorker(false, isRunning);
+				_engine.parent.removeWorker(idNode);
+			}
+			return _engine.this;
+		}
+
+		this.addWaitingWorker = function()
+		{
+			_engine.totalWaitingWorkers += 1;	
+					
+			if (_engine.parent !== null) {
+				_engine.parent.addWaitingWorker();
 			}
 			return _engine.this;
 		}
 
 		this.removeWaitingWorker = function()
 		{
-			_engine.totalWaitingWorkers -= 1;
-			
-			if (_engine.totalWorkers === 0 && _engine.totalWaitingWorkers === 0) {
-				if (_engine.error !== null) {
-					$execCallback('catch');
-				} else {
-					$execCallback('then');
-				}
-				$execCallback('complete');
-			}
+			_engine.totalWaitingWorkers -= 1;	
 					
-			if (_engine.parent != null) {
-				_engine.parent.removeWaitingWorker();
-				return _engine.this;
-			}
-			return _engine.this;
-		}
-
-		this.error = function(error)
-		{
-			_engine.error = (_engine.error === null ? error : _engine.error);
 			if (_engine.parent !== null) {
-				_engine.parent.error(error);
+				_engine.parent.removeWaitingWorker();
 			}
 			return _engine.this;
 		}
 
-		this.save = function(data)
+		//-- --//
+		this.save = function(name, data)
 		{
-			_engine.save = data;
+			if (data === undefined) {
+				data = name;
+				name = undefined;
+			}
+			var setDataRec = function(flux, type, search) {
+				if (search.length === 0) {
+					flux[type] = data;
+					return ;
+				}
+				flux[type] = (flux[type] === undefined ? {} : flux[type]);
+				return setDataRec(flux[type], search.splice(0, 1).shift(), search);
+			};
+			setDataRec(_engine.this, 'flux', (typeof(name) !== 'string' ? [] : name.split('.')));
 			return _engine.this;
 		}
 
-		this._save = function(data)
+		this._save = function(name, data)
 		{
 			var parent = _engine.parent;
 			if (parent !== null) {
-				parent.save(data);
+				parent.save(name, data);
 			}
 			return _engine.this;
 		}
 
-		this.get = function()
+		this.get = function(name)
 		{
-			return _engine.save;
+			var getDataRec = function(flux, type, search) {
+				if (search.length === 0) {
+					return flux[type];
+				}
+				flux[type] = (flux[type] === undefined ? {} : flux[type]);
+				return getDataRec(flux[type], search.splice(0, 1).shift(), search);
+			};
+			return getDataRec(_engine.this, 'flux', (typeof(name) !== 'string' ? [] : name.split('.')));
 		}
 
-		this._get = function()
+		this._get = function(name)
 		{
 			var parent = _engine.parent;
-			return (parent == null ? parent : parent.get());
+			return (parent === null ? null : parent.get(name));
 		}
 
+		//-- --//
 		this.root = function()
 		{
 			return _engine.parent;
@@ -414,30 +567,20 @@ var Workers = function()
 			return (_parent.nodes[key] == undefined ? null : _parent.nodes[key]);
 		}
 
-		this.waiting = function(callback, removeAfterCall, isParent)
+		//-- --//
+		this.back = function(callback, removeAfterCall)
 		{
-			_engine.totalWaitingWorkers += 1;
-			if (typeof(isParent) === 'boolean' && isParent === true) {
-				_parent.waitingWorkers += 1;
-				$on('waiting', function(next) {
-					_parent.waitingWorkers -= 1;
-					callback(next);
-				}, removeAfterCall, function() {
-					return _engine.this.removeWaitingWorker;
-				});
-			}
-			if (_engine.parent != null) {
-				_engine.parent.waiting(callback, removeAfterCall, false);
-				return _engine.this;
-			}
+			$on('back', callback, removeAfterCall, function(param) {
+				return param;
+			});
 			return _engine.this;
 		}
 
 		this.complete = function(callback, removeAfterCall)
 		{
-			if (_engine.totalWorkers === 0) {
+			if (_engine.status === $enum.STATUS.FINISH) {
 				callback(_engine.error);
-				if (typeof(removeAfterCall) != 'boolean' || removeAfterCall == true) {
+				if (typeof(removeAfterCall) !== 'boolean' || removeAfterCall == true) {
 					return _engine.this;
 				}
 			}
@@ -449,23 +592,23 @@ var Workers = function()
 
 		this.then = function(callback, removeAfterCall)
 		{
-			if (_engine.totalWorkers === 0 && _engine.error === null) {
-				callback(_engine.save);
-				if (typeof(removeAfterCall) != 'boolean' || removeAfterCall == true) {
+			if (_engine.status === $enum.STATUS.FINISH && _engine.error === null) {
+				callback(_engine.this.flux);
+				if (typeof(removeAfterCall) !== 'boolean' || removeAfterCall == true) {
 					return _engine.this;
 				}
 			}
 			$on('then', callback, removeAfterCall, function() {
-				return _engine.save;
+				return _engine.this.flux;
 			});
 			return _engine.this;
 		}
 
 		this.catch = function(callback, removeAfterCall)
 		{
-			if (_engine.totalWorkers === 0 && _engine.error !== null) {
+			if (_engine.status === $enum.STATUS.FINISH && _engine.error !== null) {
 				callback(_engine.error);
-				if (typeof(removeAfterCall) != 'boolean' || removeAfterCall == true) {
+				if (typeof(removeAfterCall) !== 'boolean' || removeAfterCall == true) {
 					return _engine.this;
 				}
 			}
@@ -475,18 +618,21 @@ var Workers = function()
 			return _engine.this;
 		}
 
-		var $on = function(type, callback, removeAfterCall, params)
+		var $on = function(type, callback, removeAfterCall, param)
 		{
+			removeAfterCall = (typeof(removeAfterCall) === 'boolean' ? removeAfterCall : true);
+			param = (typeof(param) === 'function' ? param : null);
+
 			_engine.callback.push({
 				type: type,
 				callback: callback,
 				removeAfterCall: removeAfterCall,
-				params: params,
+				param: param,
 			});
 			return _engine.this;
 		}
 
-		var $execCallback = function(type)
+		var $execCallback = function(type, param)
 		{
 			var copyCallback = _engine.callback;
 			_engine.callback = [];
@@ -498,10 +644,11 @@ var Workers = function()
 				if (typeof(copyCallback[index].removeAfterCall) == 'boolean' && copyCallback[index].removeAfterCall == false) {
 					_engine.callback.push(copyCallback[index]);
 				}
-				copyCallback[index].callback(copyCallback[index].params());
+				copyCallback[index].callback((typeof(copyCallback[index].param) === 'function' ? copyCallback[index].param(param) : copyCallback[index].param));
 			}
 		}
 
+		//-- --//
 		this.getName = function()
 		{
 			return _engine.name;
@@ -515,6 +662,11 @@ var Workers = function()
 		this.getId = function()
 		{
 			return _engine.id;
+		}
+
+		this.getError = function()
+		{
+			return _engine.error;
 		}
 
 		this.getStatus = function()
@@ -549,7 +701,7 @@ var Workers = function()
 
 		this.getTotalWorkers = function()
 		{
-			return _engine.totalWorkers;
+			return _parent.nodes.length;
 		}
 
 		this.getTotalWaitingWorkers = function()
@@ -567,11 +719,12 @@ var Workers = function()
 			return _parent.nodes;
 		}
 
+		//-- --//
 		var _parent = {
 			limitWorkers: 0,
 			limitExtra: false,
 			wasRejected: false,
-			haveInterval: null,
+			isInterval: null,
 			nodes: [],
 			workers: 0,
 			runningWorkers: 0,
@@ -580,9 +733,10 @@ var Workers = function()
 			callback: null,
 			stack: {
 				status: false,
-				currentNode: 0,
+				currentNode: -1,
 				isRunning: $enum.STATUS.WAITING,
 			},
+			currentSeek: -1,
 		};
 
 		var _engine = {
@@ -593,11 +747,9 @@ var Workers = function()
 			status: $enum.NONE,
 			nodeStatus: $enum.NONE,
 			type: $enum.NONE,
-			save: null,
 			error: null,
 			children: {},
 			callback: [],
-			totalWorkers: 0,
 			totalRunningWorkers: 0,
 			totalWaitingWorkers: 0,
 		};

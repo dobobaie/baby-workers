@@ -28,7 +28,7 @@ var a = workers.create('limitWorker', (worker, randomValue) => {
                 );          
                worker.pop();
             }, (~~(Math.random() * 1000)));
-        }, random2)
+        }).map(random2)
         .limit(0) // Unlimit worker but if parent have a limit so it take parent limit
         .limit(-1) // Unlimit worker
         .run();
@@ -38,7 +38,25 @@ var a = workers.create('limitWorker', (worker, randomValue) => {
         });
 
     }, (~~(Math.random() * 1000)));
-}, random).limit(2).run();
+}).map(random).limit(2).run();
+
+// const random = ['<r>', '<a>', '<n>', '<d>', '<o>', '<m>', '<r>', '<a>', '<n>', '<d>', '<o>', '<m>'];
+// workers.create('limitWorker', (worker, randomValue) => {
+//     console.log(
+//         'Id:', worker.getId(),
+//         'limitWorker', randomValue,
+//         'LimitWorker Workers:', worker.getWorkers(),
+//         'LimitWorker Waiting workers', worker.getWaitingWorkers(),
+//         'LimitWorker Running workers', worker.getRunningWorkers(),
+//         'Total workers:', workers.getTotalWorkers(),
+//         'Total waiting workers', workers.getTotalWaitingWorkers(),
+//         'Total running workers', workers.getTotalRunningWorkers()
+//     );
+//     setTimeout(() => {
+//         worker.pop()
+//     }, (~~(Math.random() * 5000)));
+// }).map(random).limit(2).run();
+
 
 // All workers has finish
 workers.complete((error) => {

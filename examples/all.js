@@ -11,7 +11,7 @@ workers.create((worker, elem) => {
         console.log('unknown =>', elem, ' - ', 'my id =>', worker.getId());
         worker.pop();
     }, (~~(Math.random() * 1000)));
-}, ['a', 'b', 'c', 'd']).run().then((data) => {
+}).map(['a', 'b', 'c', 'd']).run().then((data) => {
     console.log('Unknown Promises then', data);
 }).catch((data) => {
     console.log('Unknown Promises catch', data);
@@ -23,7 +23,7 @@ workers.create('basic', (worker, elem) => {
         console.log('basic =>', elem, ' - ', 'my id =>', worker.getId());
         worker.pop();
     }, (~~(Math.random() * 1000)));
-}, ['e', 'f', 'g', 'h']).run();
+}).map(['e', 'f', 'g', 'h']).run();
 
 workers.basic.complete(() => {
     console.log('All "basic" has finished');
@@ -35,15 +35,15 @@ workers.basic.complete(() => {
 
 // Promises error worker
 workers.create('promises', (worker, elem) => {
-    worker.error('There are an error').pop(); // pop is important !
-}, 'Test promises').run().catch((error) => {
+    worker.error('There are an error');
+}).set('Test promises').run().catch((error) => {
     console.log('Promises catch', '"', error, '"');
 });
 
 // Promises without error worker
 workers.create('promises2', (worker, elem) => {
-    worker._save('There are no error !').pop(); // pop is important !
-}, 'Test promises').run().then((data) => {
+    worker._save('There are no error !').pop();
+}).set('Test promises').run().then((data) => {
     console.log('Promises then', '"', data, '"');
 });
 
@@ -53,7 +53,7 @@ workers.create('stack', (worker, elem) => {
         console.log('stack =>', elem, ' - ', 'my id =>', worker.getId());
         worker.pop();
     }, (~~(Math.random() * 1000)));
-}, ['z', 'y', 'x', 'w']).stack(); // mode stack enabled
+}).map(['z', 'y', 'x', 'w']).stack(); // mode stack enabled
 workers.stack.complete(() => {
     console.log('All "stack" has finished');
 });
@@ -64,7 +64,7 @@ workers.create('simple', (worker, elem) => {
         console.log('simple =>', elem);
         worker.pop();
     }, (~~(Math.random() * 1000)));
-}, "toto").run();
+}).set('toto').run();
 workers.simple.complete(() => {
     console.log('All "simple" has finished');
 });
@@ -77,16 +77,16 @@ setTimeout(() => {
 }, 2000);
 
 // Run worker in a timeout
-workers.create('timeout', (worker) => {
+workers.create('Delay', (worker) => {
     console.log('Timeout called');
     worker.pop();
-}).timeout(1000);
+}).delay(1000);
 
 // push worker
 workers.create('pushWorker', (worker, elem) => {
     console.log('My elem', elem);
-  worker.pop();
-}, null).run();
+    worker.pop();
+}).run();
 workers.pushWorker.complete(() => {
     console.log('All "pushWorker" has finished');
 }, false); // false = don't destroy callback
@@ -96,10 +96,10 @@ workers.create('interval', (worker) => {
     const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     workers.pushWorker.push(possible.charAt(Math.floor(Math.random() * possible.length))); // we adding an element to pushWorker
 
-    worker.save(worker.get() + 1);
+    worker._save(worker._get() + 1);
     worker.pop();
 
-    if (worker.get() == 5) {
+    if (worker._get() == 5) {
         workers.interval.stop();
     }
 }).save(0).interval(~~(Math.random() * 1000));
@@ -127,12 +127,17 @@ workers.create('data', (worker) => {
     worker.pop();
 }).save([]).run();
 
-// Cancel parent worker
-const runMe = workers.create('cancel', (worker) => {
-    console.log('Here is never called');
+workers.create('data2', (worker) => {
+    console.log(worker._get());
     worker.pop();
-});
-runMe.cancel();
+}).save('elements.0.element.1.toto', []).run();
+
+// Cancel parent worker
+// const runMe = workers.create('cancel', (worker) => {
+//     console.log('Here is never called');
+//     worker.pop();
+// });
+// runMe.cancel();
 
 // Limit workers
 const random = ['<r>', '<a>', '<n>', '<d>', '<o>', '<m>'];
@@ -157,7 +162,8 @@ var a = workers.create('limitWorker', (worker, randomValue) => {
                 );          
                worker.pop();
             }, (~~(Math.random() * 1000)));
-        }, random2)
+        })
+        .map(random2)
         .limit(0) // Unlimit worker but if parent have a limit so it take parent limit
         .limit(-1) // Unlimit worker
         .run();
@@ -167,12 +173,11 @@ var a = workers.create('limitWorker', (worker, randomValue) => {
         });
 
     }, (~~(Math.random() * 1000)));
-}, random).limit(2).run();
+}).map(random).limit(2).run();
 
 // Set errors
 workers.create('errorComplete', (worker) => {
     worker.error('Why ?', 'Because you stole my bread dude...');
-    worker.pop();
 }).run()
 
 // All workers has finish

@@ -11,7 +11,7 @@ workers.create('stack', (worker, elem) => {
         console.log('stack =>', elem, ' - ', 'my id =>', worker.getId());
         worker.pop();
     }, (~~(Math.random() * 1000)));
-}, ['z', 'y', 'x', 'w']).stack(); // mode stack enabled
+}).map(['z', 'y', 'x', 'w']).stack(); // mode stack enabled
 workers.stack.complete(() => {
     console.log('All "stack" has finished');
 });

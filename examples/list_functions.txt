@@ -1,0 +1,53 @@
+## Functions
+
+Name | Available | Description | Additionnal
+---- | --------- | ----------- | -----------
+
+## TMP
+
+create = name | callback | data
+map = arr
+push = data
+set = data
+stack = 
+timeout = time
+delay = time
+interval = time
+run = 
+reply = idNode
+next = 
+exec = idNode | forceId
+limit = max | extra
+cancel = 
+error = error | isWorker
+pop = 
+addWorker = isWorker
+removeWorker = idNode
+addWaitingWorker = 
+removeWaitingWorker = 
+save = data
+_save = data
+get = 
+_get = 
+root = 
+parent = name | type
+parentNode = name
+node = key
+back = callback | removeAfterCall
+complete = callback | removeAfterCall
+then = callback | removeAfterCall
+catch = callback | removeAfterCall
+getName = 
+getType = 
+getId = 
+getError = 
+getStatus = 
+getNodeStatus = 
+getLimit = 
+getWorkers = 
+getWaitingWorkers = 
+getRunningWorkers = 
+getTotalWorkers = 
+getTotalWaitingWorkers = 
+getTotalRunningWorkers = 
+getNodes = 

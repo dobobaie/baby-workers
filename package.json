@@ -1,7 +1,7 @@
 {
   "name": "baby-workers",
-  "version": "2.0.0",
-  "description": "Manage your functions asynchronously or as stack with baby-workers and promises.",
+  "version": "2.0.1",
+  "description": "Execute and manage your code asynchronously with workers, like promise, execute each element of an array or a simple element in callback.",
   "main": "workers.min.js",
   "scripts": {
     "test": "node examples/all.js"
@@ -11,7 +11,7 @@
     "url": "git+https://github.com/dobobaie/baby-workers.git"
   },
   "keywords": [
-    "promises",
+    "promise",
     "javascript",
     "queue",
     "line",
