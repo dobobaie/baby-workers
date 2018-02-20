@@ -254,9 +254,6 @@ var Workers = function()
 			}
 
 			if (_parent.stack.currentNode + 1 !== idNode && forceId === false) {
-				_engine.this.back(function() {
-					$execCallback('waiting');
-				}, false);
 				return $waitingNode(idNode, forceId);
 			}
 
@@ -264,44 +261,15 @@ var Workers = function()
 			
 			if (_parent.limitWorkers > 0 && _parent.limitWorkers <= _parent.runningWorkers) {
 				if (_parent.limitExtra ===  false || parent === null || (parent.getLimit() > 0 && parent.getLimit() + _parent.limitWorkers <= parent.getTotalRunningWorkers() + _engine.this.getRunningWorkers())) {
-					
-					// to opti
-					if (_engine.this.getRunningWorkers() === 0 && parent !== null && typeof(parent.back) === 'function') {
-						parent.back(function() {
-							$execCallback('waiting');
-						}, false);
-					} else {
-						_engine.this.back(function() {
-							$execCallback('waiting');
-						}, false);
-					}
-					//
-
 					return $waitingNode(idNode, forceId);
 				}
 			}
 
 			if (_parent.limitWorkers === 0 && parent !== null && parent.getLimit() > 0 && parent.getLimit() <= parent.getTotalRunningWorkers() + _engine.this.getRunningWorkers()) {
-				
-				// to opti
-				if (_engine.this.getRunningWorkers() === 0 && parent !== null && typeof(parent.back) === 'function') {
-					parent.back(function() {
-						$execCallback('waiting');
-					}, false);
-				} else {
-					_engine.this.back(function() {
-						$execCallback('waiting');
-					}, false);
-				}
-				//
-
 				return $waitingNode(idNode, forceId);
 			}
 
 			if (_parent.stack.status === true && _parent.stack.isRunning !== $enum.STATUS.WAITING) {
-				_engine.this.back(function() {
-					$execCallback('waiting');
-				}, false);
 				return $waitingNode(idNode, forceId);
 			}
 			return $execNodeCallback(idNode, forceId);
@@ -350,6 +318,8 @@ var Workers = function()
 				} else if (_parent.isInterval === null) {
 					_parent.stack.isRunning = $enum.STATUS.FINISH;
 				}
+
+				$execCallback('waiting');
 			});
 
 			try {
