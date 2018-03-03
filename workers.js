@@ -86,8 +86,10 @@ var Workers = function()
 			
 					delete _engine.this.getId;
 					delete _engine.this.getNodeStatus;
+					delete _engine.this.getPromise;
 				break;
 				case $enum.TYPE.PARENT:
+					delete _engine.this.all;
 					delete _engine.this.pop;
 					delete _engine.this.root;
 					
@@ -96,6 +98,7 @@ var Workers = function()
 				break;
 				case $enum.TYPE.NODE:
 					delete _engine.this.setInfos;
+					delete _engine.this.all;
 					delete _engine.this.set;
 					delete _engine.this.map;
 					
@@ -109,6 +112,8 @@ var Workers = function()
 					delete _engine.this.cancel;
 					delete _engine.this.push;
 					delete _engine.this.node;
+				
+					delete _engine.this.getPromise;
 				break;
 			}
 			delete _engine.this.init;
@@ -121,6 +126,43 @@ var Workers = function()
 			_engine.status = $enum.STATUS.WAITING;
 			delete _engine.this.setInfos;
 			return _engine.this;
+		}
+
+		this.all = function()
+		{
+			_engine.this.addWorker();
+
+			var args = Object.values(arguments);
+			var dataError = null;
+			var dataReturned = [];
+			var totalRunner = args.length;
+			
+			return new Promise(function(reject, resolve) {
+				var updateRunner = function() {
+					totalRunner -= 1;
+					if (totalRunner === 0) {
+						if (dataError !== null) {
+							reject(dataError);
+						} else {
+							resolve(dataReturned);
+						}
+						_engine.this.removeWorker();
+					}
+				}
+				args.map(function(elem, index) {
+					if (typeof(elem.then) === 'function' && typeof(elem.catch) === 'function') {
+						elem.then(function(data) {
+							dataReturned[index] = data;
+							updateRunner();
+						}).catch(function(error) {
+							dataError = error;
+							updateRunner();
+						});
+					} else {
+						updateRunner();
+					}
+				});				
+			});
 		}
 
 		//-- --//
@@ -154,10 +196,7 @@ var Workers = function()
 		{
 			_parent.stack.status = true;
 			_engine.this.next();
-
-			return new Promise(function(resolve, reject) {
-				_engine.this.then(resolve).catch(reject);
-			});
+			return $createPromise();
 		}
 
 		// deprecated, to remove in v2.5.0
@@ -172,10 +211,7 @@ var Workers = function()
 		{
 			time = (time == null || typeof(time) != 'number' ? 1 : time);
 			setTimeout(_engine.this.run, time);
-
-			return new Promise(function(resolve, reject) {
-				_engine.this.then(resolve).catch(reject);
-			});
+			return $createPromise();
 		}
 
 		this.interval = function(time)
@@ -189,16 +225,13 @@ var Workers = function()
 				_engine.this.removeWorker();
 				clearInterval(_parent.isInterval);
 			};
-
-			return new Promise(function(resolve, reject) {
-				_engine.this.then(resolve).catch(reject);
-			});
+			return $createPromise();
 		}
 
 		this.run = function()
 		{
 			while (_engine.this.next());
-			return _engine.this;
+			return $createPromise();
 		}
 
 		this.reply = function(idNode)
@@ -210,7 +243,7 @@ var Workers = function()
 				_parent.data.map(function(elem, key) {
 					_engine.this.exec(key, true);
 				});
-				return _engine.this;
+				return $createPromise();
 			}
 			return _engine.this.exec(idNode, true);
 		}
@@ -222,7 +255,7 @@ var Workers = function()
 				_parent.currentSeek -= 1;
 				return null;
 			}
-			return _engine.this;
+			return $createPromise();
 		}
 
 		this.exec = function(idNode, forceId)
@@ -244,7 +277,15 @@ var Workers = function()
 			}
 
 			$verifyNodeStatus(idNode, forceId);
-			return _engine.this;
+			return $createPromise();
+		}
+
+		var $createPromise = function()
+		{
+			_engine.promise = new Promise(function(resolve, reject) {
+				_engine.this.then(resolve).catch(reject);
+			});
+			return _engine.promise;
 		}
 
 		var $verifyNodeStatus = function(idNode, forceId)
@@ -679,6 +720,11 @@ var Workers = function()
 			return _engine.totalWaitingWorkers;
 		}
 
+		this.getPromise = function()
+		{
+			return _engine.promise;
+		}
+
 		this.getTotalRunningWorkers = function()
 		{
 			return _engine.totalRunningWorkers;
@@ -717,6 +763,7 @@ var Workers = function()
 			status: $enum.NONE,
 			nodeStatus: $enum.NONE,
 			type: $enum.NONE,
+			promise: null,
 			error: null,
 			children: {},
 			callback: [],

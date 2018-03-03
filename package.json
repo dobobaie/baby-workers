@@ -1,7 +1,7 @@
 {
   "name": "baby-workers",
-  "version": "2.0.3",
-  "description": "Execute and manage your code asynchronously with workers, like promise, execute each element of an array or a simple element in callback.",
+  "version": "2.0.4",
+  "description": "Execute and manage your code asynchronously with workers and promise.",
   "main": "workers.min.js",
   "scripts": {
     "test": "node examples/all.js"
