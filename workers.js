@@ -137,7 +137,7 @@ var Workers = function()
 			var dataReturned = [];
 			var totalRunner = args.length;
 			
-			return new Promise(function(reject, resolve) {
+			return new Promise(function(resolve, reject) {
 				var updateRunner = function() {
 					totalRunner -= 1;
 					if (totalRunner === 0) {
@@ -149,6 +149,7 @@ var Workers = function()
 						_engine.this.removeWorker();
 					}
 				}
+				
 				args.map(function(elem, index) {
 					if (typeof(elem.then) === 'function' && typeof(elem.catch) === 'function') {
 						elem.then(function(data) {

@@ -180,6 +180,13 @@ workers.create('errorComplete', (worker) => {
     worker.error('Why ?', 'Because you stole my bread dude...');
 }).run()
 
+// All function
+workers.all(workers.limitWorker, workers.stack, workers.pushWorker).then(() => {
+    console.log('Then called from "all" function');
+}).catch((error) => {
+    console.log('Catch called from "all" function', error);
+});
+
 // All workers has finish
 workers.then(() => {
     console.log('All "workers" has finished', 'Then is called');
